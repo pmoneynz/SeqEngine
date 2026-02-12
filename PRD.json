@@ -1,0 +1,980 @@
+{
+  "project": "SequencerEngine",
+  "description": "Reusable Swift sequencer module for macOS and iOS with deterministic 96 PPQN timing, multi-track MIDI sequencing, pattern/song workflows, and importable API.",
+  "created": "2026-02-12",
+  "quality_bar": "production",
+  "test_command": "swift test && swift build -c release",
+  "iteration_budget_minutes": "10-30",
+  "items": [
+    {
+      "id": "ARCH-001",
+      "category": "architectural",
+      "description": "Create Package.swift with SequencerEngine library and test target.",
+      "steps": [
+        "Add Package.swift with library and test target declarations",
+        "Run swift package dump-package successfully"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "ARCH-002",
+      "category": "architectural",
+      "description": "Create initial source and test directories.",
+      "steps": [
+        "Create Sources/SequencerEngine and Tests/SequencerEngineTests",
+        "Add placeholder source and test files that compile"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "ARCH-003",
+      "category": "architectural",
+      "description": "Verify baseline package build passes.",
+      "steps": [
+        "Run swift build",
+        "Confirm zero build errors"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "ARCH-004",
+      "category": "architectural",
+      "description": "Implement Tick value type fixed at 96 PPQN semantics.",
+      "steps": [
+        "Add Tick type with integer storage and validation",
+        "Add unit tests for Tick construction and arithmetic"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "ARCH-005",
+      "category": "architectural",
+      "description": "Implement BarBeatTick value type.",
+      "steps": [
+        "Add BarBeatTick with bar, beat, tick fields",
+        "Add validation tests for legal and illegal values"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "ARCH-006",
+      "category": "architectural",
+      "description": "Implement conversion from Tick to BarBeatTick for fixed 4/4.",
+      "steps": [
+        "Add converter for Tick to BarBeatTick in 4/4",
+        "Add tests for known conversion fixtures"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "ARCH-007",
+      "category": "architectural",
+      "description": "Implement conversion from BarBeatTick to Tick for fixed 4/4.",
+      "steps": [
+        "Add converter for BarBeatTick to Tick in 4/4",
+        "Add round-trip tests with ARCH-006 conversions"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "ARCH-008",
+      "category": "architectural",
+      "description": "Add time-signature-aware timeline conversion support.",
+      "steps": [
+        "Support conversion across changing time signatures",
+        "Add tests covering at least one mid-sequence signature change"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "ARCH-009",
+      "category": "architectural",
+      "description": "Define scheduler protocol for timed event dispatch.",
+      "steps": [
+        "Add Scheduler protocol and basic interface contract",
+        "Add tests for compile-time usage by transport"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "ARCH-010",
+      "category": "architectural",
+      "description": "Implement deterministic test clock for scheduler injection.",
+      "steps": [
+        "Create controllable test clock implementation",
+        "Add tests proving deterministic progression"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "ARCH-011",
+      "category": "architectural",
+      "description": "Implement deterministic tie-break ordering for same-tick events.",
+      "steps": [
+        "Define stable ordering strategy for identical timestamps",
+        "Add tests proving deterministic replay order"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "ARCH-012",
+      "category": "architectural",
+      "description": "Define Project and Sequence domain models.",
+      "steps": [
+        "Implement Project and Sequence core fields",
+        "Add model construction tests"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "ARCH-013",
+      "category": "architectural",
+      "description": "Define Track domain model with drum/MIDI type.",
+      "steps": [
+        "Implement Track type with explicit track-kind enum",
+        "Add tests for track-kind constraints"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "ARCH-014",
+      "category": "architectural",
+      "description": "Define Song and SongStep domain models.",
+      "steps": [
+        "Implement Song and SongStep with reps semantics support",
+        "Add tests for basic song-step model invariants"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "ARCH-015",
+      "category": "architectural",
+      "description": "Define MIDIEvent model for required event classes.",
+      "steps": [
+        "Add MIDIEvent cases for note, program, bend, pressure, CC, SysEx",
+        "Add tests for payload range validation"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "ARCH-016",
+      "category": "architectural",
+      "description": "Add Codable conformance and round-trip tests for core models.",
+      "steps": [
+        "Add Codable to Project/Sequence/Track/Song/SongStep/MIDIEvent",
+        "Add encode-decode round-trip tests"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "ARCH-017",
+      "category": "architectural",
+      "description": "Create SequencerEngine facade skeleton.",
+      "steps": [
+        "Expose public SequencerEngine type",
+        "Compile minimal public API surface"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "ARCH-018",
+      "category": "architectural",
+      "description": "Make SequencerEngine mutation boundary concurrency-safe.",
+      "steps": [
+        "Implement actor or serial isolation strategy for engine state",
+        "Add tests for concurrent mutation safety"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "INTEG-001",
+      "category": "integration",
+      "description": "Implement transport states and storage.",
+      "steps": [
+        "Add transport states for stop/play/record/overdub",
+        "Add tests for state representation"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "INTEG-002",
+      "category": "integration",
+      "description": "Implement transport transition rules.",
+      "steps": [
+        "Implement valid transitions between transport states",
+        "Add tests rejecting invalid transitions"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "INTEG-003",
+      "category": "integration",
+      "description": "Implement locate command using BarBeatTick.",
+      "steps": [
+        "Add locate API and cursor update behavior",
+        "Add tests for exact cursor positioning"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "INTEG-004",
+      "category": "integration",
+      "description": "Implement record-ready mode state.",
+      "steps": [
+        "Add record-ready flag behavior",
+        "Add tests for enabling and disabling record-ready"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "INTEG-005",
+      "category": "integration",
+      "description": "Implement punch-in/out transitions for record and overdub.",
+      "steps": [
+        "Support punch-in while playing when record-ready",
+        "Add tests for punch-out behavior"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "INTEG-006",
+      "category": "integration",
+      "description": "Implement sequence track capacity configuration (32 baseline, 99 max).",
+      "steps": [
+        "Add configurable track-capacity limits",
+        "Add tests for 32 and 99 boundary cases"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "INTEG-007",
+      "category": "integration",
+      "description": "Enforce sequence container limit of 99.",
+      "steps": [
+        "Reject creation beyond 99 sequences",
+        "Add tests for 99 accepted and 100 rejected"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "INTEG-008",
+      "category": "integration",
+      "description": "Enforce song container limit of 20.",
+      "steps": [
+        "Reject creation beyond 20 songs",
+        "Add tests for 20 accepted and 21 rejected"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "INTEG-009",
+      "category": "integration",
+      "description": "Enforce per-song step limit of 250.",
+      "steps": [
+        "Reject step insertion beyond 250 steps",
+        "Add tests for 250 accepted and 251 rejected"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "INTEG-010",
+      "category": "integration",
+      "description": "Implement primary track routing (channel plus port).",
+      "steps": [
+        "Add primary route fields to track output settings",
+        "Add tests validating route assignment behavior"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "INTEG-011",
+      "category": "integration",
+      "description": "Implement auxiliary track routing destination.",
+      "steps": [
+        "Add optional auxiliary route support",
+        "Add tests proving dual-destination output selection"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "INTEG-012",
+      "category": "integration",
+      "description": "Implement song-step playback progression with reps.",
+      "steps": [
+        "Advance through song steps by repetition counts",
+        "Add tests for deterministic step progression"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "INTEG-013",
+      "category": "integration",
+      "description": "Implement song end behavior for reps=0.",
+      "steps": [
+        "Treat step with reps=0 as end-of-song marker",
+        "Add tests for stop-at-end behavior"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "INTEG-014",
+      "category": "integration",
+      "description": "Implement song loop-to-step behavior.",
+      "steps": [
+        "Add loop target step handling when song reaches end",
+        "Add tests for loop target correctness"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "INTEG-015",
+      "category": "integration",
+      "description": "Implement basic song-to-sequence conversion pipeline.",
+      "steps": [
+        "Copy song step sequence events into destination sequence in order",
+        "Add tests for contiguous event ordering"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "INTEG-016",
+      "category": "integration",
+      "description": "Implement repetition-aware song-to-sequence conversion.",
+      "steps": [
+        "Apply reps counts during conversion output",
+        "Add tests for expected total bars after conversion"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "INTEG-017",
+      "category": "integration",
+      "description": "Implement CoreMIDI output adapter skeleton.",
+      "steps": [
+        "Create CoreMIDI output bridge interface",
+        "Add compile-time test with mock destination"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "INTEG-018",
+      "category": "integration",
+      "description": "Implement CoreMIDI input adapter skeleton.",
+      "steps": [
+        "Create CoreMIDI input bridge interface",
+        "Add compile-time test with mock source events"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "INTEG-019",
+      "category": "integration",
+      "description": "Implement SMF Type 0 import.",
+      "steps": [
+        "Parse SMF Type 0 into internal events",
+        "Add fixture test for successful import"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "INTEG-020",
+      "category": "integration",
+      "description": "Implement SMF Type 1 import.",
+      "steps": [
+        "Parse SMF Type 1 into internal events",
+        "Add fixture test for successful import"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "INTEG-021",
+      "category": "integration",
+      "description": "Implement SMF Type 0 export.",
+      "steps": [
+        "Serialize internal events to SMF Type 0",
+        "Add fixture test for valid export file"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "INTEG-022",
+      "category": "integration",
+      "description": "Implement SMF Type 1 export.",
+      "steps": [
+        "Serialize internal events to SMF Type 1",
+        "Add fixture test for valid export file"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "INTEG-023",
+      "category": "integration",
+      "description": "Implement versioned JSON schema field for project persistence.",
+      "steps": [
+        "Add schema version to persisted project format",
+        "Add tests for expected version emission"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "INTEG-024",
+      "category": "integration",
+      "description": "Implement JSON save and load round-trip path.",
+      "steps": [
+        "Implement save and load for Project",
+        "Add round-trip tests with schema version checks"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "FUNC-001",
+      "category": "functional",
+      "description": "Implement quantization note-value modes including off.",
+      "steps": [
+        "Support 1/8, 1/8 triplet, 1/16, 1/16 triplet, 1/32, 1/32 triplet, off",
+        "Add tests for mode selection behavior"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "FUNC-002",
+      "category": "functional",
+      "description": "Apply quantization in record path.",
+      "steps": [
+        "Snap incoming recorded notes to selected grid",
+        "Add tests verifying record-time snapping"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "FUNC-003",
+      "category": "functional",
+      "description": "Apply quantization to move-existing offline operation.",
+      "steps": [
+        "Quantize selected region of existing events",
+        "Add tests for region-limited quantization"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "FUNC-004",
+      "category": "functional",
+      "description": "Implement deterministic swing timing shift formula.",
+      "steps": [
+        "Delay even subdivisions with swing-percent formula",
+        "Add tests for deterministic delay output"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "FUNC-005",
+      "category": "functional",
+      "description": "Enforce swing percent bounds 50 through 75.",
+      "steps": [
+        "Reject out-of-range swing values",
+        "Add tests for 50, 62, 66, 75 boundaries"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "FUNC-006",
+      "category": "functional",
+      "description": "Implement shift timing earlier mode.",
+      "steps": [
+        "Shift quantized events earlier by allowed tick amount",
+        "Add tests for earlier shift behavior"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "FUNC-007",
+      "category": "functional",
+      "description": "Implement shift timing later mode.",
+      "steps": [
+        "Shift quantized events later by allowed tick amount",
+        "Add tests for later shift behavior"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "FUNC-008",
+      "category": "functional",
+      "description": "Disable shift timing behavior when quantization mode is off.",
+      "steps": [
+        "No-op shift when note value is off",
+        "Add tests proving shift is inactive in off mode"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "FUNC-009",
+      "category": "functional",
+      "description": "Implement note repeat for drum tracks.",
+      "steps": [
+        "Retrigger held drum notes at active quantize interval",
+        "Add tests for interval-accurate drum retriggering"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "FUNC-010",
+      "category": "functional",
+      "description": "Implement note repeat for MIDI tracks.",
+      "steps": [
+        "Retrigger held MIDI notes at active quantize interval",
+        "Add tests for interval-accurate MIDI retriggering"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "FUNC-011",
+      "category": "functional",
+      "description": "Implement per-track on/off output control.",
+      "steps": [
+        "Add track output enabled flag",
+        "Add tests proving disabled tracks emit no output"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-012",
+      "category": "functional",
+      "description": "Implement solo behavior muting non-active tracks.",
+      "steps": [
+        "Add solo mode state and evaluation logic",
+        "Add tests proving only solo track emits output"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-013",
+      "category": "functional",
+      "description": "Implement track velocity percent scaling.",
+      "steps": [
+        "Scale emitted note velocity by per-track percentage",
+        "Add tests for expected scaling outputs"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-014",
+      "category": "functional",
+      "description": "Implement MIDI-only transpose guard.",
+      "steps": [
+        "Apply transpose to MIDI tracks only",
+        "Add tests proving drum tracks remain untransposed"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-015",
+      "category": "functional",
+      "description": "Implement sequence loop mode off and loop-to-bar.",
+      "steps": [
+        "Add loop mode and loop target bar behavior",
+        "Add tests for cursor behavior at loop boundary"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-016",
+      "category": "functional",
+      "description": "Implement sequence-vs-master tempo source selection.",
+      "steps": [
+        "Add tempo-source selection logic",
+        "Add tests verifying active tempo changes with source"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-017",
+      "category": "functional",
+      "description": "Implement mid-sequence tempo change insertion and deletion.",
+      "steps": [
+        "Add tempo-change list with insertion and deletion",
+        "Add tests for list ordering by BarBeatTick"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-018",
+      "category": "functional",
+      "description": "Implement tempo-change ON/OFF toggle behavior.",
+      "steps": [
+        "Toggle tempo-change application during playback",
+        "Add tests proving ON applies and OFF ignores changes"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-019",
+      "category": "functional",
+      "description": "Implement tap tempo using two taps.",
+      "steps": [
+        "Calculate tempo from two tap intervals",
+        "Add tests for deterministic two-tap BPM calculation"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-020",
+      "category": "functional",
+      "description": "Implement tap tempo averaging modes for three and four taps.",
+      "steps": [
+        "Add averaging depth options for 3 and 4 taps",
+        "Add tests for deterministic averaged BPM output"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-021",
+      "category": "functional",
+      "description": "Implement step edit for note events.",
+      "steps": [
+        "Support insert, update, delete for note and duration fields",
+        "Add tests for note-event editing correctness"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-022",
+      "category": "functional",
+      "description": "Implement step edit for program, pitch bend, and pressure events.",
+      "steps": [
+        "Support insert, update, delete for program/bend/pressure events",
+        "Add tests for value-range validation"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-023",
+      "category": "functional",
+      "description": "Implement step edit for CC and SysEx events.",
+      "steps": [
+        "Support insert, update, delete for CC and SysEx",
+        "Add tests including SysEx payload size handling"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-024",
+      "category": "functional",
+      "description": "Implement insert and delete bars operations.",
+      "steps": [
+        "Implement insert blank bars and delete bar ranges",
+        "Add tests for event relocation after insert/delete"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-025",
+      "category": "functional",
+      "description": "Implement copy bars operation across sequences.",
+      "steps": [
+        "Copy source bar range to destination before target bar",
+        "Add tests for destination length growth"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-026",
+      "category": "functional",
+      "description": "Implement copy events replace mode.",
+      "steps": [
+        "Copy selected event region replacing destination events",
+        "Add tests for replace-mode exactness"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-027",
+      "category": "functional",
+      "description": "Implement copy events merge mode.",
+      "steps": [
+        "Copy selected event region merging into destination events",
+        "Add tests for merge behavior without destination length growth"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-028",
+      "category": "functional",
+      "description": "Implement edit-loop state snapshot capture.",
+      "steps": [
+        "Capture sequence state when edit loop turns on",
+        "Add tests proving snapshot exists before edits"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-029",
+      "category": "functional",
+      "description": "Implement edit-loop turnOff commit behavior.",
+      "steps": [
+        "Apply edits when turnOff is selected",
+        "Add tests proving committed edits persist"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-030",
+      "category": "functional",
+      "description": "Implement edit-loop undoAndOff rollback behavior.",
+      "steps": [
+        "Revert to snapshot when undoAndOff is selected",
+        "Add tests proving exact rollback restoration"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-031",
+      "category": "functional",
+      "description": "Implement wait-for-key start behavior.",
+      "steps": [
+        "Delay playback/record start until first MIDI key event when enabled",
+        "Add tests proving delayed start behavior"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-032",
+      "category": "functional",
+      "description": "Implement wait-for-key trigger note exclusion from recording.",
+      "steps": [
+        "Ensure first key used to start wait-for-key is not recorded",
+        "Add tests confirming trigger-note exclusion"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-033",
+      "category": "functional",
+      "description": "Implement one-bar count-in behavior.",
+      "steps": [
+        "Add exactly one bar of count-in before playback/record when enabled",
+        "Add tests for count-in duration and transition to bar 1"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-034",
+      "category": "functional",
+      "description": "Enforce no event recording during count-in bar.",
+      "steps": [
+        "Prevent event commits during count-in",
+        "Add tests proving notes are not recorded until sequence start"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-035",
+      "category": "functional",
+      "description": "Implement overdub hold-erase behavior.",
+      "steps": [
+        "Erase held pad/key notes in overdub erase mode",
+        "Add tests for overdub-time note removal"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-036",
+      "category": "functional",
+      "description": "Implement stopped erase with ALL, ONLY, and ALL EXCEPT event filters.",
+      "steps": [
+        "Add region erase with event-type filtering modes",
+        "Add tests for each filter mode correctness"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "FUNC-037",
+      "category": "functional",
+      "description": "Implement stopped erase note-selection behavior for MIDI and drum tracks.",
+      "steps": [
+        "Support MIDI note-range erase selection",
+        "Support drum-note selection erase semantics",
+        "Add tests proving mode-specific behavior"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "POL-001",
+      "category": "polish",
+      "description": "Expose observer callback for transport state changes.",
+      "steps": [
+        "Publish transport-state notifications",
+        "Add tests for event emission order"
+      ],
+      "priority": 4,
+      "passes": false
+    },
+    {
+      "id": "POL-002",
+      "category": "polish",
+      "description": "Expose observer callback for timeline position updates.",
+      "steps": [
+        "Publish bar.beat.tick position updates",
+        "Add tests for monotonic cursor progression in playback"
+      ],
+      "priority": 4,
+      "passes": false
+    },
+    {
+      "id": "POL-003",
+      "category": "polish",
+      "description": "Expose observer callback for emitted MIDI events.",
+      "steps": [
+        "Publish emitted event stream to observers",
+        "Add tests for deterministic observer event ordering"
+      ],
+      "priority": 4,
+      "passes": false
+    },
+    {
+      "id": "POL-004",
+      "category": "polish",
+      "description": "Document minimal 4-bar integration example in README.",
+      "steps": [
+        "Write import, setup, pattern creation, and play example",
+        "Verify sample compiles in test or doc-check harness"
+      ],
+      "priority": 4,
+      "passes": false
+    },
+    {
+      "id": "POL-005",
+      "category": "polish",
+      "description": "Add scheduler jitter regression test under synthetic CPU load.",
+      "steps": [
+        "Measure dispatch variance in stress harness",
+        "Assert variance stays within defined thresholds"
+      ],
+      "priority": 4,
+      "passes": false
+    },
+    {
+      "id": "POL-006",
+      "category": "polish",
+      "description": "Add deterministic 60,000-note stress scenario with no dropped scheduled events.",
+      "steps": [
+        "Generate at least 60,000 note events in offline deterministic simulation",
+        "Assert scheduled event count equals emitted event count"
+      ],
+      "priority": 4,
+      "passes": false
+    },
+    {
+      "id": "POL-007",
+      "category": "polish",
+      "description": "Add property tests for timeline conversion invariants.",
+      "steps": [
+        "Generate randomized timeline positions and signatures",
+        "Assert Tick to BarBeatTick to Tick round-trip invariants"
+      ],
+      "priority": 4,
+      "passes": false
+    },
+    {
+      "id": "POL-008",
+      "category": "polish",
+      "description": "Add property tests for quantization invariants.",
+      "steps": [
+        "Generate randomized event timings and quantize modes",
+        "Assert quantized timings align to selected grid constraints"
+      ],
+      "priority": 4,
+      "passes": false
+    },
+    {
+      "id": "POL-009",
+      "category": "polish",
+      "description": "Run final validation and enforce no placeholder implementation paths.",
+      "steps": [
+        "Run swift test and confirm pass",
+        "Run swift build -c release and confirm pass",
+        "Verify no placeholder TODO/stub code remains in shipped paths"
+      ],
+      "priority": 5,
+      "passes": false
+    }
+  ]
+}

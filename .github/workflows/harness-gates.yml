@@ -1,0 +1,26 @@
+name: Harness Gates
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  governance-and-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Architecture Gate
+        run: bash harness/architecture/check-boundaries.sh "$PWD"
+
+      - name: Self Review Evidence
+        run: bash harness/review/self-review.sh "$PWD" --strict
+
+      - name: Secondary Review
+        run: bash harness/review/secondary-review.sh "$PWD"
+
+      - name: Kill Criteria Gate
+        run: bash harness/quality/evaluate-kill-criteria.sh "$PWD" --enforce
