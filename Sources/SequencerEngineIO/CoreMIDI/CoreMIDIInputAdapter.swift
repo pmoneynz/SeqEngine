@@ -11,7 +11,7 @@ public enum CoreMIDIInputError: Error, Equatable {
     case connectFailed(OSStatus)
 }
 
-public final class CoreMIDIInputAdapter: @unchecked Sendable {
+public final class CoreMIDIInputAdapter: MIDIInput, @unchecked Sendable {
     private var client: MIDIClientRef = 0
     private var inputPort: MIDIPortRef = 0
     private var sourceRef: MIDIEndpointRef = 0
@@ -97,7 +97,7 @@ public final class CoreMIDIInputAdapter: @unchecked Sendable {
             let bytes: [UInt8] = withUnsafeBytes(of: packet.data) { raw in
                 Array(raw.prefix(Int(packet.length)))
             }
-            let decoded = Self.decodeMessages(bytes, tick: timestamp)
+            let decoded = Self.decodeEventBytes(bytes, tick: timestamp)
             for event in decoded {
                 _ = inputQueue.push(event, overflowPolicy: overflowPolicy)
                 onEvent?(event)
@@ -144,70 +144,6 @@ public final class CoreMIDIInputAdapter: @unchecked Sendable {
         return endpoint
     }
 
-    private static func decodeMessages(_ bytes: [UInt8], tick: Int) -> [MIDIEvent] {
-        var events: [MIDIEvent] = []
-        var cursor = 0
-
-        while cursor < bytes.count {
-            let status = bytes[cursor]
-            if status == 0xF0 {
-                let remaining = Array(bytes[cursor...])
-                if let terminator = remaining.firstIndex(of: 0xF7) {
-                    let payload = Array(remaining.dropFirst().prefix(terminator - 1))
-                    events.append(.sysEx(data: payload, tick: tick))
-                    cursor += terminator + 1
-                    continue
-                } else {
-                    events.append(.sysEx(data: Array(remaining.dropFirst()), tick: tick))
-                    break
-                }
-            }
-
-            let kind = status & 0xF0
-            let channel = status & 0x0F
-            switch kind {
-            case 0x80, 0x90, 0xA0, 0xB0, 0xE0:
-                guard cursor + 2 < bytes.count else {
-                    cursor = bytes.count
-                    continue
-                }
-                let data1 = bytes[cursor + 1]
-                let data2 = bytes[cursor + 2]
-                switch kind {
-                case 0x80:
-                    events.append(.noteOff(channel: channel, note: data1, velocity: data2, tick: tick))
-                case 0x90:
-                    events.append(.noteOn(channel: channel, note: data1, velocity: data2, tick: tick))
-                case 0xA0:
-                    events.append(.polyPressure(channel: channel, note: data1, pressure: data2, tick: tick))
-                case 0xB0:
-                    events.append(.controlChange(channel: channel, controller: data1, value: data2, tick: tick))
-                case 0xE0:
-                    let value = Int(data1 & 0x7F) | (Int(data2 & 0x7F) << 7)
-                    events.append(.pitchBend(channel: channel, value: value, tick: tick))
-                default:
-                    break
-                }
-                cursor += 3
-            case 0xC0, 0xD0:
-                guard cursor + 1 < bytes.count else {
-                    cursor = bytes.count
-                    continue
-                }
-                let data1 = bytes[cursor + 1]
-                if kind == 0xC0 {
-                    events.append(.programChange(channel: channel, program: data1, tick: tick))
-                } else {
-                    events.append(.channelPressure(channel: channel, pressure: data1, tick: tick))
-                }
-                cursor += 2
-            default:
-                cursor += 1
-            }
-        }
-
-        return events
-    }
 }
 
 #else
@@ -216,7 +152,7 @@ public enum CoreMIDIInputError: Error, Equatable {
     case unavailablePlatform
 }
 
-public final class CoreMIDIInputAdapter: @unchecked Sendable {
+public final class CoreMIDIInputAdapter: MIDIInput, @unchecked Sendable {
     public init(
         sourceName: String? = nil,
         overflowPolicy: QueueOverflowPolicy = .dropOldest,

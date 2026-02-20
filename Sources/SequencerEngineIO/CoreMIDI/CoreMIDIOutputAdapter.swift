@@ -12,7 +12,7 @@ public enum CoreMIDIOutputError: Error, Equatable {
     case unsupportedEvent
 }
 
-public final class CoreMIDIOutputAdapter: RealtimePacketSink, @unchecked Sendable {
+public final class CoreMIDIOutputAdapter: MIDIOutput, @unchecked Sendable {
     private let client: MIDIClientRef
     private let outputPort: MIDIPortRef
     private let destinationName: String?
@@ -200,12 +200,21 @@ public enum CoreMIDIOutputError: Error, Equatable {
     case unavailablePlatform
 }
 
-public final class CoreMIDIOutputAdapter: RealtimePacketSink, @unchecked Sendable {
+public final class CoreMIDIOutputAdapter: MIDIOutput, @unchecked Sendable {
     public init(destinationName: String? = nil, clientName: String = "SequencerEngineIO.Output") throws {
         throw CoreMIDIOutputError.unavailablePlatform
     }
 
     public func consume(_ packet: RealtimeScheduledPacket) {}
+
+    public func send(event: MIDIEvent) throws {
+        throw CoreMIDIOutputError.unavailablePlatform
+    }
+
+    public func send(packet: RealtimeScheduledPacket) throws {
+        throw CoreMIDIOutputError.unavailablePlatform
+    }
+
 }
 
 #endif

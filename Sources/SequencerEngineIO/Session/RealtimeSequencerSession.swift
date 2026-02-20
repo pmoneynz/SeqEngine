@@ -6,11 +6,38 @@ public enum RealtimeSequencerSessionError: Error {
     case inputInitializationFailed(Error)
 }
 
-public final class RealtimeSequencerSession: @unchecked Sendable {
+public final class RealtimeSequencerSession: RealtimeSessioning, @unchecked Sendable {
     public let scheduler: RealtimeScheduler
     public let midiOutput: CoreMIDIOutputAdapter?
     public let midiInput: CoreMIDIInputAdapter?
 
+    private let protocolMIDIOutput: (any MIDIOutput)?
+    private let protocolMIDIInput: (any MIDIInput)?
+
+    public var output: (any MIDIOutput)? {
+        protocolMIDIOutput ?? midiOutput
+    }
+
+    public var input: (any MIDIInput)? {
+        protocolMIDIInput ?? midiInput
+    }
+
+    public init(
+        scheduler: RealtimeScheduler,
+        midiOutput: (any MIDIOutput)? = nil,
+        midiInput: (any MIDIInput)? = nil
+    ) {
+        self.scheduler = scheduler
+        self.protocolMIDIOutput = midiOutput
+        self.protocolMIDIInput = midiInput
+        self.midiOutput = midiOutput as? CoreMIDIOutputAdapter
+        self.midiInput = midiInput as? CoreMIDIInputAdapter
+        self.scheduler.setPacketSink(output)
+        bindInputCallback()
+    }
+
+    /// Provisional convenience initializer that directly wires CoreMIDI adapters.
+    /// Prefer `init(scheduler:midiOutput:midiInput:)` for stable protocol-based composition.
     public init(
         engine: SequencerEngine = SequencerEngine(),
         configuration: RealtimeSchedulerConfiguration = RealtimeSchedulerConfiguration(),
@@ -44,16 +71,15 @@ public final class RealtimeSequencerSession: @unchecked Sendable {
 
         self.midiOutput = output
         self.midiInput = input
+        self.protocolMIDIOutput = nil
+        self.protocolMIDIInput = nil
         self.scheduler = RealtimeScheduler(
             engine: engine,
             configuration: configuration,
             clock: clock,
             packetSink: output
         )
-
-        self.midiInput?.setOnEvent { [weak scheduler] event in
-            _ = scheduler?.submit(.incomingMIDI(event))
-        }
+        bindInputCallback()
     }
 
     public func start() {
@@ -74,12 +100,18 @@ public final class RealtimeSequencerSession: @unchecked Sendable {
     }
 
     public func pollIncomingMIDI() {
-        midiInput?.pollEvents { [weak self] event in
+        input?.pollEvents { [weak self] event in
             _ = self?.scheduler.submit(.incomingMIDI(event))
         }
     }
 
     public func drainScheduledPackets(_ body: (RealtimeScheduledPacket) -> Void) {
         scheduler.drainOutput(body)
+    }
+
+    private func bindInputCallback() {
+        input?.setOnEvent { [weak scheduler] event in
+            _ = scheduler?.submit(.incomingMIDI(event))
+        }
     }
 }

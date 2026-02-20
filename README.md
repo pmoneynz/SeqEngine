@@ -10,6 +10,18 @@ Add this package in Xcode using `Package.swift` or **File -> Add Packages...**, 
 import SequencerEngine
 ```
 
+## API Stability and Deprecation Policy
+
+This package follows Semantic Versioning for `SequencerEngine` and `SequencerEngineIO`:
+
+- Patch releases contain non-breaking fixes.
+- Minor releases contain backward-compatible additions.
+- Major releases may contain breaking changes.
+
+Public APIs are deprecated for at least one minor release before removal, except for urgent security/correctness fixes. The stable realtime integration boundary is protocol-based (`MIDIInput`, `MIDIOutput`, `RealtimeSessioning`), while concrete CoreMIDI adapters remain provisional implementations behind that facade.
+
+CI enforces API breakage checks with `harness/quality/check-api-diff.sh`. See `docs/api-stability.md` for details.
+
 ## Minimal Integration (4-bar playback)
 
 ```swift

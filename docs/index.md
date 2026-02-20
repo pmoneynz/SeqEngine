@@ -2,6 +2,7 @@
 
 ## API
 - `../README.md`
+- `api-stability.md`
 
 ## Architecture
 - `design-docs/architecture-contract.md`

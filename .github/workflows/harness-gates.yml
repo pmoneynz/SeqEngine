@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Architecture Gate
         run: bash harness/architecture/check-boundaries.sh "$PWD"
@@ -24,3 +26,17 @@ jobs:
 
       - name: Kill Criteria Gate
         run: bash harness/quality/evaluate-kill-criteria.sh "$PWD" --enforce
+
+  api-diff:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure baseline branch refs
+        run: git fetch origin main --depth=1
+
+      - name: API Diff Gate
+        run: bash harness/quality/check-api-diff.sh "$PWD" "origin/main"
