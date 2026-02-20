@@ -27,6 +27,20 @@ jobs:
       - name: Kill Criteria Gate
         run: bash harness/quality/evaluate-kill-criteria.sh "$PWD" --enforce
 
+  swift-validation:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Full Swift Test Suite
+        run: swift test
+
+      - name: Release Build Validation
+        run: swift build -c release
+
   api-diff:
     runs-on: macos-latest
     steps:
