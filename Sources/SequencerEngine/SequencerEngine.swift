@@ -602,9 +602,13 @@ public struct SequencerEngine: Sendable {
             return
         }
 
+        if songPlayback != nil, transport.isRunning {
+            _ = advanceSongTransport(by: ticks, emit: emit)
+            return
+        }
+
         let resolvedSequenceIndex = resolvedSequenceIndexForScheduling(explicitSequenceIndex: sequenceIndex)
-        guard songPlayback == nil,
-              let resolvedSequenceIndex,
+        guard let resolvedSequenceIndex,
               resolvedSequenceIndex >= 0,
               resolvedSequenceIndex < project.sequences.count,
               transport.isRunning else {
@@ -630,7 +634,7 @@ public struct SequencerEngine: Sendable {
             return
         }
 
-        if advanceSongTransport(by: ticks) {
+        if advanceSongTransport(by: ticks, emit: nil) {
             return
         }
 
@@ -958,7 +962,10 @@ public struct SequencerEngine: Sendable {
         transport.countInRemainingTicks = max(0, transport.countInRemainingTicks - ticks)
     }
 
-    private mutating func advanceSongTransport(by ticks: Int) -> Bool {
+    private mutating func advanceSongTransport(
+        by ticks: Int,
+        emit: ((ScheduledEvent) -> Void)?
+    ) -> Bool {
         guard transport.isRunning, var state = songPlayback else {
             return false
         }
@@ -986,6 +993,19 @@ public struct SequencerEngine: Sendable {
 
             let remainingInRepeat = max(1, stepLength - state.tickInRepeat)
             let consumed = min(remainingTicks, remainingInRepeat)
+
+            if let emit {
+                let sequence = project.sequences[step.sequenceIndex]
+                emitScheduledEvents(
+                    sequenceIndex: step.sequenceIndex,
+                    sequence: sequence,
+                    startTick: state.tickInRepeat,
+                    duration: consumed,
+                    loopLength: sequence.loopLengthTicks(),
+                    emit: emit
+                )
+            }
+
             state.tickInRepeat += consumed
             remainingTicks -= consumed
             transport.tickPosition += consumed

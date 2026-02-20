@@ -542,6 +542,172 @@ final class SequencerEngineTests: XCTestCase {
         XCTAssertNil(engine.transport.activeSongIndex)
     }
 
+    func testSongModeSchedulingEmitsEventsForActiveStep() {
+        var sequence = Sequence(name: "Step A")
+        sequence.setLoopToBar(1)
+        sequence.tracks = [
+            Track(
+                kind: .midi,
+                events: [
+                    .noteOn(channel: 0, note: 60, velocity: 100, tick: 0),
+                    .noteOff(channel: 0, note: 60, velocity: 0, tick: 24)
+                ]
+            )
+        ]
+
+        let song = Song(
+            steps: [SongStep(sequenceIndex: 0, repeats: 1)],
+            endBehavior: .stopAtEnd
+        )
+        var engine = SequencerEngine(project: Project(sequences: [sequence], songs: [song]))
+        XCTAssertTrue(engine.playSong(at: 0))
+
+        let scheduled = engine.advanceTransportAndCollectScheduledEvents(by: 25)
+
+        XCTAssertEqual(scheduled.map(\.sequenceIndex), [0, 0])
+        XCTAssertEqual(
+            scheduled.map(\.event),
+            [
+                .noteOn(channel: 0, note: 60, velocity: 100, tick: 0),
+                .noteOff(channel: 0, note: 60, velocity: 0, tick: 24)
+            ]
+        )
+    }
+
+    func testSongModeSchedulingEmitsAcrossStepTransitionWithinWindow() {
+        var first = Sequence(name: "First")
+        first.setLoopToBar(1)
+        first.tracks = [
+            Track(
+                kind: .midi,
+                events: [
+                    .noteOn(channel: 0, note: 60, velocity: 100, tick: 380)
+                ]
+            )
+        ]
+
+        var second = Sequence(name: "Second")
+        second.setLoopToBar(1)
+        second.tracks = [
+            Track(
+                kind: .midi,
+                events: [
+                    .noteOn(channel: 0, note: 67, velocity: 100, tick: 4)
+                ]
+            )
+        ]
+
+        let song = Song(
+            steps: [
+                SongStep(sequenceIndex: 0, repeats: 1),
+                SongStep(sequenceIndex: 1, repeats: 1)
+            ],
+            endBehavior: .stopAtEnd
+        )
+        var engine = SequencerEngine(project: Project(sequences: [first, second], songs: [song]))
+        XCTAssertTrue(engine.playSong(at: 0))
+
+        let scheduled = engine.advanceTransportAndCollectScheduledEvents(by: 390)
+
+        XCTAssertEqual(scheduled.map(\.sequenceIndex), [0, 1])
+        XCTAssertEqual(
+            scheduled.map(\.event),
+            [
+                .noteOn(channel: 0, note: 60, velocity: 100, tick: 380),
+                .noteOn(channel: 0, note: 67, velocity: 100, tick: 4)
+            ]
+        )
+        XCTAssertEqual(engine.transport.activeSongStepIndex, 1)
+        XCTAssertEqual(engine.transport.activeSongRepeat, 1)
+    }
+
+    func testSongModeSchedulingStopsEmissionAfterZeroRepeatEndMarker() {
+        var sequence = Sequence(name: "Single")
+        sequence.setLoopToBar(1)
+        sequence.tracks = [
+            Track(
+                kind: .midi,
+                events: [
+                    .noteOn(channel: 0, note: 62, velocity: 100, tick: 0),
+                    .noteOff(channel: 0, note: 62, velocity: 0, tick: 24)
+                ]
+            )
+        ]
+
+        let song = Song(
+            steps: [
+                SongStep(sequenceIndex: 0, repeats: 1),
+                SongStep(sequenceIndex: 0, repeats: 0)
+            ],
+            endBehavior: .stopAtEnd
+        )
+        var engine = SequencerEngine(project: Project(sequences: [sequence], songs: [song]))
+        XCTAssertTrue(engine.playSong(at: 0))
+
+        let firstPass = engine.advanceTransportAndCollectScheduledEvents(by: 768)
+        XCTAssertEqual(
+            firstPass.map(\.event),
+            [
+                .noteOn(channel: 0, note: 62, velocity: 100, tick: 0),
+                .noteOff(channel: 0, note: 62, velocity: 0, tick: 24)
+            ]
+        )
+        XCTAssertEqual(engine.transport.mode, .stopped)
+
+        let afterStop = engine.advanceTransportAndCollectScheduledEvents(by: 384)
+        XCTAssertTrue(afterStop.isEmpty)
+    }
+
+    func testSongModeSchedulingContinuesAfterLoopToStepAtEndMarker() {
+        var intro = Sequence(name: "Intro")
+        intro.setLoopToBar(1)
+        intro.tracks = [
+            Track(
+                kind: .midi,
+                events: [
+                    .noteOn(channel: 0, note: 60, velocity: 100, tick: 0)
+                ]
+            )
+        ]
+
+        var loop = Sequence(name: "Loop")
+        loop.setLoopToBar(1)
+        loop.tracks = [
+            Track(
+                kind: .midi,
+                events: [
+                    .noteOn(channel: 0, note: 67, velocity: 100, tick: 0)
+                ]
+            )
+        ]
+
+        let song = Song(
+            steps: [
+                SongStep(sequenceIndex: 0, repeats: 1),
+                SongStep(sequenceIndex: 1, repeats: 1),
+                SongStep(sequenceIndex: 0, repeats: 0)
+            ],
+            endBehavior: .loopToStep(1)
+        )
+        var engine = SequencerEngine(project: Project(sequences: [intro, loop], songs: [song]))
+        XCTAssertTrue(engine.playSong(at: 0))
+
+        let firstWindow = engine.advanceTransportAndCollectScheduledEvents(by: 384)
+        XCTAssertEqual(firstWindow.map(\.sequenceIndex), [0])
+        XCTAssertEqual(firstWindow.map(\.event), [.noteOn(channel: 0, note: 60, velocity: 100, tick: 0)])
+
+        let secondWindow = engine.advanceTransportAndCollectScheduledEvents(by: 384)
+        XCTAssertEqual(secondWindow.map(\.sequenceIndex), [1])
+        XCTAssertEqual(secondWindow.map(\.event), [.noteOn(channel: 0, note: 67, velocity: 100, tick: 0)])
+        XCTAssertEqual(engine.transport.activeSongStepIndex, 1)
+
+        let thirdWindow = engine.advanceTransportAndCollectScheduledEvents(by: 384)
+        XCTAssertEqual(thirdWindow, secondWindow)
+        XCTAssertEqual(engine.transport.mode, .playing)
+        XCTAssertEqual(engine.transport.activeSongStepIndex, 1)
+        XCTAssertEqual(engine.transport.activeSongRepeat, 1)
+    }
+
     func testSongToSequenceConversionProducesContiguousTimelineAndPreservesOrdering() throws {
         var first = Sequence(name: "Verse")
         first.setLoopToBar(1)
