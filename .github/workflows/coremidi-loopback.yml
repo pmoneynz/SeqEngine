@@ -1,0 +1,30 @@
+name: CoreMIDI Loopback
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  coremidi-loopback-guaranteed:
+    if: ${{ vars.ENABLE_GUARANTEED_LOOPBACK_LANE == 'true' }}
+    runs-on: [self-hosted, macOS, loopback]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run guaranteed loopback lane
+        run: swift test --filter CoreMIDILoopbackTests
+
+  coremidi-loopback-best-effort:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run capability diagnostics
+        run: swift test --filter testCoreMIDILoopbackCapabilityProbeReportsEnvironment
+
+      - name: Run best-effort loopback integration
+        run: swift test --filter testCoreMIDIOutputToInputLoopbackDeliversEventWhenCapabilityIsPresent

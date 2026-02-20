@@ -87,7 +87,19 @@ final class CoreMIDILoopbackTests: XCTestCase {
         }
     }
 
-    func testCoreMIDIOutputToInputLoopbackDeliversEvent() throws {
+    func testCoreMIDILoopbackCapabilityProbeReportsEnvironment() {
+        let report = CoreMIDICapabilityProbe.probe()
+        XCTAssertTrue(report.platformSupported)
+        XCTAssertFalse(report.diagnostics.isEmpty)
+    }
+
+    func testCoreMIDIOutputToInputLoopbackDeliversEventWhenCapabilityIsPresent() throws {
+        let report = CoreMIDICapabilityProbe.probe()
+        guard report.canExerciseLoopback else {
+            let diagnostics = report.diagnostics.joined(separator: " | ")
+            throw XCTSkip("Loopback capability unavailable. Diagnostics: \(diagnostics)")
+        }
+
         let loopback = try VirtualMIDILoopback(name: "SELoopback-\(UUID().uuidString)")
         let output = try CoreMIDIOutputAdapter(
             destinationEndpoint: loopback.destination,
@@ -105,7 +117,8 @@ final class CoreMIDILoopbackTests: XCTestCase {
         input.pollEvents { event in received.append(event) }
 
         if received.isEmpty {
-            throw XCTSkip("No loopback event observed in current CoreMIDI test environment.")
+            let diagnostics = report.diagnostics.joined(separator: " | ")
+            throw XCTSkip("No loopback event observed. Diagnostics: \(diagnostics)")
         }
         guard let first = received.first,
               case let .noteOn(channel, note, velocity, _) = first else {
@@ -126,7 +139,14 @@ final class CoreMIDILoopbackTests: XCTestCase {
 #else
 
 final class CoreMIDILoopbackTests: XCTestCase {
-    func testCoreMIDIOutputToInputLoopbackDeliversEvent() throws {
+    func testCoreMIDILoopbackCapabilityProbeReportsEnvironment() {
+        let report = CoreMIDICapabilityProbe.probe()
+        XCTAssertFalse(report.platformSupported)
+        XCTAssertFalse(report.canExerciseLoopback)
+        XCTAssertFalse(report.diagnostics.isEmpty)
+    }
+
+    func testCoreMIDIOutputToInputLoopbackDeliversEventWhenCapabilityIsPresent() throws {
         throw XCTSkip("CoreMIDI loopback tests are macOS-only.")
     }
 }
