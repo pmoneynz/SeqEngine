@@ -708,6 +708,175 @@ final class SequencerEngineTests: XCTestCase {
         XCTAssertEqual(engine.transport.activeSongRepeat, 1)
     }
 
+    func testSongModeSchedulingParityWithFlattenedOracleFixtures() throws {
+        let fixtures: [(name: String, project: Project, songIndex: Int, stepTicks: Int)] = [
+            (
+                name: "basic-repetition",
+                project: Project(
+                    sequences: [
+                        Sequence(
+                            name: "A",
+                            loopMode: .loopToBar(1),
+                            tracks: [
+                                Track(
+                                    kind: .midi,
+                                    events: [
+                                        .noteOn(channel: 0, note: 60, velocity: 100, tick: 0),
+                                        .noteOff(channel: 0, note: 60, velocity: 0, tick: 24)
+                                    ]
+                                )
+                            ]
+                        ),
+                        Sequence(
+                            name: "B",
+                            loopMode: .loopToBar(1),
+                            tracks: [
+                                Track(
+                                    kind: .midi,
+                                    events: [
+                                        .noteOn(channel: 1, note: 67, velocity: 90, tick: 12),
+                                        .noteOff(channel: 1, note: 67, velocity: 0, tick: 36)
+                                    ]
+                                )
+                            ]
+                        )
+                    ],
+                    songs: [
+                        Song(
+                            steps: [
+                                SongStep(sequenceIndex: 0, repeats: 2),
+                                SongStep(sequenceIndex: 1, repeats: 1)
+                            ],
+                            endBehavior: .stopAtEnd
+                        )
+                    ]
+                ),
+                songIndex: 0,
+                stepTicks: 73
+            ),
+            (
+                name: "simultaneous-multi-track",
+                project: Project(
+                    sequences: [
+                        Sequence(
+                            name: "A",
+                            loopMode: .loopToBar(1),
+                            tracks: [
+                                Track(
+                                    kind: .midi,
+                                    events: [
+                                        .controlChange(channel: 0, controller: 1, value: 64, tick: 0),
+                                        .noteOn(channel: 0, note: 60, velocity: 100, tick: 0)
+                                    ]
+                                ),
+                                Track(
+                                    kind: .midi,
+                                    events: [
+                                        .noteOn(channel: 2, note: 72, velocity: 110, tick: 0)
+                                    ]
+                                )
+                            ]
+                        ),
+                        Sequence(
+                            name: "B",
+                            loopMode: .loopToBar(1),
+                            tracks: [
+                                Track(
+                                    kind: .midi,
+                                    events: [
+                                        .programChange(channel: 3, program: 12, tick: 0),
+                                        .noteOn(channel: 3, note: 65, velocity: 95, tick: 24)
+                                    ]
+                                )
+                            ]
+                        )
+                    ],
+                    songs: [
+                        Song(
+                            steps: [
+                                SongStep(sequenceIndex: 0, repeats: 1),
+                                SongStep(sequenceIndex: 1, repeats: 2)
+                            ],
+                            endBehavior: .stopAtEnd
+                        )
+                    ]
+                ),
+                songIndex: 0,
+                stepTicks: 97
+            ),
+            (
+                name: "end-marker-stop",
+                project: Project(
+                    sequences: [
+                        Sequence(
+                            name: "A",
+                            loopMode: .loopToBar(1),
+                            tracks: [
+                                Track(
+                                    kind: .midi,
+                                    events: [
+                                        .programChange(channel: 0, program: 10, tick: 0),
+                                        .noteOn(channel: 0, note: 61, velocity: 100, tick: 48)
+                                    ]
+                                )
+                            ]
+                        ),
+                        Sequence(
+                            name: "B",
+                            loopMode: .loopToBar(1),
+                            tracks: [
+                                Track(
+                                    kind: .midi,
+                                    events: [
+                                        .noteOn(channel: 1, note: 69, velocity: 80, tick: 16),
+                                        .noteOff(channel: 1, note: 69, velocity: 0, tick: 28)
+                                    ]
+                                )
+                            ]
+                        )
+                    ],
+                    songs: [
+                        Song(
+                            steps: [
+                                SongStep(sequenceIndex: 0, repeats: 1),
+                                SongStep(sequenceIndex: 1, repeats: 1),
+                                SongStep(sequenceIndex: 0, repeats: 0),
+                                SongStep(sequenceIndex: 1, repeats: 8)
+                            ],
+                            endBehavior: .stopAtEnd
+                        )
+                    ]
+                ),
+                songIndex: 0,
+                stepTicks: 61
+            )
+        ]
+
+        for fixture in fixtures {
+            let songEvents = collectSongScheduledEvents(
+                project: fixture.project,
+                songIndex: fixture.songIndex,
+                stepTicks: fixture.stepTicks
+            )
+            let flattenedEvents = try collectFlattenedOracleEvents(
+                project: fixture.project,
+                songIndex: fixture.songIndex,
+                stepTicks: fixture.stepTicks
+            )
+
+            XCTAssertEqual(
+                songEvents.count,
+                flattenedEvents.count,
+                "Fixture \(fixture.name) emitted mismatched event counts."
+            )
+            XCTAssertEqual(
+                songEvents.map(Self.ticklessEventIdentity),
+                flattenedEvents.map(Self.ticklessEventIdentity),
+                "Fixture \(fixture.name) emitted mismatched event ordering/payload."
+            )
+        }
+    }
+
     func testSongToSequenceConversionProducesContiguousTimelineAndPreservesOrdering() throws {
         var first = Sequence(name: "Verse")
         first.setLoopToBar(1)
@@ -1789,6 +1958,73 @@ final class SequencerEngineTests: XCTestCase {
         XCTAssertEqual(roundTripped.ppqn, imported.ppqn)
         XCTAssertEqual(roundTripped.tracks.count, imported.tracks.count)
         XCTAssertEqual(roundTripped.tracks.map(\.events), imported.tracks.map(\.events))
+    }
+
+    private func collectSongScheduledEvents(
+        project: Project,
+        songIndex: Int,
+        stepTicks: Int
+    ) -> [MIDIEvent] {
+        var engine = SequencerEngine(project: project)
+        XCTAssertTrue(engine.playSong(at: songIndex))
+
+        var events: [MIDIEvent] = []
+        var cycles = 0
+        let window = max(1, stepTicks)
+        while engine.transport.mode != .stopped {
+            let scheduled = engine.advanceTransportAndCollectScheduledEvents(by: window)
+            events.append(contentsOf: scheduled.map(\.event))
+            cycles += 1
+            XCTAssertLessThan(cycles, 10_000, "Song scheduling did not converge.")
+        }
+        return events
+    }
+
+    private func collectFlattenedOracleEvents(
+        project: Project,
+        songIndex: Int,
+        stepTicks: Int
+    ) throws -> [MIDIEvent] {
+        let sourceEngine = SequencerEngine(project: project)
+        let flattened = try sourceEngine.convertSongToSequence(songIndex: songIndex)
+
+        var engine = SequencerEngine(project: Project(sequences: [flattened]))
+        engine.play()
+
+        let maxTick = flattened.tracks.flatMap(\.events).map(\.tick).max() ?? 0
+        let totalTicks = max(1, maxTick + 1)
+        let window = max(1, stepTicks)
+        var advanced = 0
+        var events: [MIDIEvent] = []
+        while advanced < totalTicks {
+            let consumed = min(window, totalTicks - advanced)
+            let scheduled = engine.advanceTransportAndCollectScheduledEvents(by: consumed, sequenceIndex: 0)
+            events.append(contentsOf: scheduled.map(\.event))
+            advanced += consumed
+        }
+        return events
+    }
+
+    private static func ticklessEventIdentity(_ event: MIDIEvent) -> String {
+        switch event {
+        case let .noteOn(channel, note, velocity, _):
+            return "noteOn:\(channel):\(note):\(velocity)"
+        case let .noteOff(channel, note, velocity, _):
+            return "noteOff:\(channel):\(note):\(velocity)"
+        case let .programChange(channel, program, _):
+            return "programChange:\(channel):\(program)"
+        case let .pitchBend(channel, value, _):
+            return "pitchBend:\(channel):\(value)"
+        case let .channelPressure(channel, pressure, _):
+            return "channelPressure:\(channel):\(pressure)"
+        case let .polyPressure(channel, note, pressure, _):
+            return "polyPressure:\(channel):\(note):\(pressure)"
+        case let .controlChange(channel, controller, value, _):
+            return "controlChange:\(channel):\(controller):\(value)"
+        case let .sysEx(data, _):
+            let bytes = data.map { String(format: "%02X", $0) }.joined(separator: "-")
+            return "sysEx:\(bytes)"
+        }
     }
 
     private struct PersistenceHeader: Decodable {
