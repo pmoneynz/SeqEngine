@@ -6,6 +6,14 @@ Duration: 10 working days (2 weeks)
 Priority order: **P0 first, then P1**  
 Branch: `cursor/sequencer-engine-status-526a`
 
+## Execution Status (live)
+
+- [x] Board created and committed.
+- [x] PR-01 implementation started and committed (`5284244`, `146b615`).
+- [x] PR-02 CI gate implementation started and committed (`c7e8d60`).
+- [x] PR-03 test hardening started and committed (`d45f9db`).
+- [ ] Full validation run (`swift test`, `swift build -c release`) pending in an environment with Swift toolchain.
+
 ## Hard Rules
 
 - [ ] No P1 implementation begins until all P0 PRs are merged and green.
@@ -34,12 +42,12 @@ bash harness/quality/evaluate-kill-criteria.sh "$PWD" --enforce
 ## Week 1 (P0)
 
 ### Day 1 - PR-01 start: song-mode emission path
-- [ ] Add failing tests for song-mode scheduled emission:
-  - [ ] emits events during active song step
-  - [ ] emits across step transition inside one scheduling window
-  - [ ] stops emission at `repeats=0` end marker
-  - [ ] loops emission under `loopToStep`
-- [ ] Implement song-aware emission in `advanceTransport(by:sequenceIndex:emit:)`.
+- [x] Add failing tests for song-mode scheduled emission:
+  - [x] emits events during active song step
+  - [x] emits across step transition inside one scheduling window
+  - [x] stops emission at `repeats=0` end marker
+  - [x] loops emission under `loopToStep`
+- [x] Implement song-aware emission in `advanceTransport(by:sequenceIndex:emit:)`.
 - [ ] Open PR-01 with evidence bundle.
 
 Test commands:
@@ -51,10 +59,10 @@ swift build -c release
 ```
 
 ### Day 2 - PR-01 complete and merge
-- [ ] Add parity oracle tests:
-  - [ ] `playSong` streamed scheduling vs flattened sequence oracle fixture A
-  - [ ] fixture B
-  - [ ] fixture C
+- [x] Add parity oracle tests:
+  - [x] `playSong` streamed scheduling vs flattened sequence oracle fixture A
+  - [x] fixture B
+  - [x] fixture C
 - [ ] Fix edge cases found in code review.
 - [ ] Merge PR-01 only after green CI and review signoff.
 
@@ -68,9 +76,9 @@ swift build -c release
 ```
 
 ### Day 3 - PR-02: full-suite CI as required gate
-- [ ] Update workflow(s) to run mandatory full suite:
-  - [ ] `swift test` (unfiltered) in CI
-  - [ ] `swift build -c release` in CI
+- [x] Update workflow(s) to run mandatory full suite:
+  - [x] `swift test` (unfiltered) in CI
+  - [x] `swift build -c release` in CI
 - [ ] Ensure these jobs are required checks.
 - [ ] Open and merge PR-02 after green CI.
 
@@ -84,8 +92,8 @@ gh run list --limit 20
 
 ### Day 4 - PR-03 start: determinism and stress hardening (song mode)
 - [ ] Add deterministic seeded fixture generator for song-mode scheduling.
-- [ ] Add stress test target for large multi-step songs.
-- [ ] Add repeated-run hash test for deterministic output.
+- [x] Add stress test target for large multi-step songs.
+- [x] Add repeated-run hash test for deterministic output.
 
 Test commands:
 
