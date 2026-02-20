@@ -119,4 +119,37 @@ final class RealtimeSchedulerTests: XCTestCase {
         XCTAssertTrue(first)
         XCTAssertFalse(second)
     }
+
+    func testStreamingSchedulingMatchesCompatibilityWrapperOrdering() {
+        let ppqn = Sequence.defaultPPQN
+        var trackA = Track(name: "A", kind: .midi)
+        trackA.events = [
+            .noteOn(channel: 1, note: 60, velocity: 100, tick: 0),
+            .noteOff(channel: 1, note: 60, velocity: 0, tick: ppqn / 4),
+            .noteOn(channel: 1, note: 62, velocity: 100, tick: ppqn / 2)
+        ]
+        var trackB = Track(name: "B", kind: .midi)
+        trackB.events = [
+            .noteOn(channel: 2, note: 65, velocity: 90, tick: ppqn / 4),
+            .noteOff(channel: 2, note: 65, velocity: 0, tick: ppqn / 2),
+            .noteOn(channel: 2, note: 67, velocity: 90, tick: (ppqn * 3) / 4)
+        ]
+        var sequence = Sequence(name: "Parity", ppqn: ppqn, tracks: [trackA, trackB])
+        sequence.setLoopToBar(1)
+        let project = Project(sequences: [sequence])
+
+        var wrapperEngine = SequencerEngine(project: project)
+        var streamingEngine = SequencerEngine(project: project)
+        wrapperEngine.play()
+        streamingEngine.play()
+
+        let ticks = ppqn
+        let wrapped = wrapperEngine.advanceTransportAndCollectScheduledEvents(by: ticks, sequenceIndex: 0)
+        var streamed: [SequencerEngine.ScheduledEvent] = []
+        streamingEngine.advanceTransport(by: ticks, sequenceIndex: 0) { event in
+            streamed.append(event)
+        }
+
+        XCTAssertEqual(streamed, wrapped)
+    }
 }

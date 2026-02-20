@@ -123,6 +123,7 @@ public struct SequencerEngine: Sendable {
     private var songPlayback: SongPlaybackState?
     private var editLoopState: EditLoopState?
     private var tapTempoTimestamps: [TimeInterval]
+    private var schedulingMergeCursors: [Int]
 
     public init(project: Project = Project()) {
         self.project = project
@@ -131,6 +132,7 @@ public struct SequencerEngine: Sendable {
         self.songPlayback = nil
         self.editLoopState = nil
         self.tapTempoTimestamps = []
+        self.schedulingMergeCursors = []
     }
 
     public mutating func load(project: Project) {
@@ -139,6 +141,7 @@ public struct SequencerEngine: Sendable {
         songPlayback = nil
         editLoopState = nil
         tapTempoTimestamps = []
+        schedulingMergeCursors.removeAll(keepingCapacity: true)
         updateSongTransportIndicators(nil)
     }
 
@@ -590,6 +593,38 @@ public struct SequencerEngine: Sendable {
         advanceTransport(by: ticks, loopLengthOverride: nil)
     }
 
+    public mutating func advanceTransport(
+        by ticks: Int,
+        sequenceIndex: Int? = nil,
+        emit: (ScheduledEvent) -> Void
+    ) {
+        guard ticks > 0 else {
+            return
+        }
+
+        let resolvedSequenceIndex = resolvedSequenceIndexForScheduling(explicitSequenceIndex: sequenceIndex)
+        guard songPlayback == nil,
+              let resolvedSequenceIndex,
+              resolvedSequenceIndex >= 0,
+              resolvedSequenceIndex < project.sequences.count,
+              transport.isRunning else {
+            advanceTransport(by: ticks)
+            return
+        }
+
+        let sequence = project.sequences[resolvedSequenceIndex]
+        let sequenceLoopLength = sequence.loopLengthTicks()
+        emitScheduledEvents(
+            sequenceIndex: resolvedSequenceIndex,
+            sequence: sequence,
+            startTick: transport.tickPosition,
+            duration: ticks,
+            loopLength: sequenceLoopLength,
+            emit: emit
+        )
+        advanceTransport(by: ticks, loopLengthOverride: sequenceLoopLength)
+    }
+
     private mutating func advanceTransport(by ticks: Int, loopLengthOverride: Int?) {
         guard ticks > 0 else {
             return
@@ -609,33 +644,17 @@ public struct SequencerEngine: Sendable {
         advanceCountIn(by: ticks)
     }
 
+    /// Compatibility API that preserves prior array-returning behavior.
+    /// Prefer `advanceTransport(by:sequenceIndex:emit:)` for realtime paths.
     public mutating func advanceTransportAndCollectScheduledEvents(
         by ticks: Int,
         sequenceIndex: Int? = nil
     ) -> [ScheduledEvent] {
-        guard ticks > 0 else {
-            return []
+        var scheduled: [ScheduledEvent] = []
+        advanceTransport(by: ticks, sequenceIndex: sequenceIndex) { event in
+            scheduled.append(event)
         }
-
-        let resolvedSequenceIndex = resolvedSequenceIndexForScheduling(explicitSequenceIndex: sequenceIndex)
-        guard songPlayback == nil,
-              let resolvedSequenceIndex,
-              resolvedSequenceIndex >= 0,
-              resolvedSequenceIndex < project.sequences.count,
-              transport.isRunning else {
-            advanceTransport(by: ticks)
-            return []
-        }
-
-        let sequence = project.sequences[resolvedSequenceIndex]
-        let sequenceLoopLength = sequence.loopLengthTicks()
-        let ranges = schedulingRanges(
-            startTick: transport.tickPosition,
-            duration: ticks,
-            loopLength: sequenceLoopLength
-        )
-        advanceTransport(by: ticks, loopLengthOverride: sequenceLoopLength)
-        return scheduledEvents(sequenceIndex: resolvedSequenceIndex, ranges: ranges)
+        return scheduled
     }
 
     public mutating func handleIncomingMIDI(_ event: MIDIEvent) -> MIDIEvent? {
@@ -831,74 +850,105 @@ public struct SequencerEngine: Sendable {
         return nil
     }
 
-    private func schedulingRanges(startTick: Int, duration: Int, loopLength: Int?) -> [Range<Int>] {
+    private mutating func emitScheduledEvents(
+        sequenceIndex: Int,
+        sequence: Sequence,
+        startTick: Int,
+        duration: Int,
+        loopLength: Int?,
+        emit: (ScheduledEvent) -> Void
+    ) {
         let clampedStartTick = max(0, startTick)
-        let clampedDuration = max(0, duration)
-        guard clampedDuration > 0 else {
-            return []
+        var remaining = max(0, duration)
+        guard remaining > 0 else {
+            return
         }
 
-        guard let loopLength, loopLength > 0 else {
-            return [clampedStartTick..<(clampedStartTick + clampedDuration)]
+        let trackCount = sequence.tracks.count
+        if schedulingMergeCursors.count < trackCount {
+            schedulingMergeCursors.append(contentsOf: repeatElement(0, count: trackCount - schedulingMergeCursors.count))
         }
 
-        var ranges: [Range<Int>] = []
-        var remaining = clampedDuration
-        var cursor = clampedStartTick % loopLength
+        var rangeStart = clampedStartTick
+        var wrappedStart = loopLength.map { clampedStartTick % max(1, $0) } ?? clampedStartTick
 
         while remaining > 0 {
-            let ticksUntilWrap = max(1, loopLength - cursor)
-            let consumed = min(remaining, ticksUntilWrap)
-            ranges.append(cursor..<(cursor + consumed))
-            remaining -= consumed
-            cursor = (cursor + consumed) % loopLength
-        }
-        return ranges
-    }
+            let rangeEnd: Int
+            if let loopLength, loopLength > 0 {
+                let ticksUntilWrap = max(1, loopLength - wrappedStart)
+                let consumed = min(remaining, ticksUntilWrap)
+                rangeEnd = wrappedStart + consumed
+                rangeStart = wrappedStart
+                wrappedStart = (wrappedStart + consumed) % loopLength
+                remaining -= consumed
+            } else {
+                rangeEnd = rangeStart + remaining
+                remaining = 0
+            }
 
-    private func scheduledEvents(sequenceIndex: Int, ranges: [Range<Int>]) -> [ScheduledEvent] {
-        guard sequenceIndex >= 0, sequenceIndex < project.sequences.count else {
-            return []
-        }
-
-        let sequence = project.sequences[sequenceIndex]
-        var collected: [(rangeRank: Int, scheduled: ScheduledEvent)] = []
-
-        for (rangeRank, range) in ranges.enumerated() {
             for trackIndex in sequence.tracks.indices {
                 let track = sequence.tracks[trackIndex]
-                for eventIndex in track.events.indices {
+                schedulingMergeCursors[trackIndex] = firstEventIndex(in: track.events, atOrAfter: rangeStart)
+            }
+
+            while true {
+                var bestTrackIndex = -1
+                var bestEventIndex = 0
+                var bestTick = Int.max
+
+                for trackIndex in sequence.tracks.indices {
+                    let track = sequence.tracks[trackIndex]
+                    let eventIndex = schedulingMergeCursors[trackIndex]
+                    guard eventIndex < track.events.count else {
+                        continue
+                    }
                     let event = track.events[eventIndex]
-                    if range.contains(event.tick) {
-                        collected.append(
-                            (
-                                rangeRank: rangeRank,
-                                scheduled: ScheduledEvent(
-                                    sequenceIndex: sequenceIndex,
-                                    trackIndex: trackIndex,
-                                    eventIndex: eventIndex,
-                                    event: event
-                                )
-                            )
-                        )
+                    guard event.tick < rangeEnd else {
+                        continue
+                    }
+                    if event.tick < bestTick ||
+                        (event.tick == bestTick && (bestTrackIndex == -1 || trackIndex < bestTrackIndex)) {
+                        bestTrackIndex = trackIndex
+                        bestEventIndex = eventIndex
+                        bestTick = event.tick
                     }
                 }
-            }
-        }
 
-        return collected.sorted { lhs, rhs in
-            if lhs.rangeRank != rhs.rangeRank {
-                return lhs.rangeRank < rhs.rangeRank
+                guard bestTrackIndex >= 0 else {
+                    break
+                }
+
+                let track = sequence.tracks[bestTrackIndex]
+                let event = track.events[bestEventIndex]
+                emit(
+                    ScheduledEvent(
+                        sequenceIndex: sequenceIndex,
+                        trackIndex: bestTrackIndex,
+                        eventIndex: bestEventIndex,
+                        event: event
+                    )
+                )
+                schedulingMergeCursors[bestTrackIndex] = bestEventIndex + 1
             }
-            if lhs.scheduled.event.tick != rhs.scheduled.event.tick {
-                return lhs.scheduled.event.tick < rhs.scheduled.event.tick
+
+            if loopLength == nil {
+                break
             }
-            if lhs.scheduled.trackIndex != rhs.scheduled.trackIndex {
-                return lhs.scheduled.trackIndex < rhs.scheduled.trackIndex
-            }
-            return lhs.scheduled.eventIndex < rhs.scheduled.eventIndex
         }
-        .map(\.scheduled)
+    }
+
+    private func firstEventIndex(in events: [MIDIEvent], atOrAfter tick: Int) -> Int {
+        var low = 0
+        var high = events.count
+        while low < high {
+            let mid = (low + high) / 2
+            if events[mid].tick < tick {
+                low = mid + 1
+            } else {
+                high = mid
+            }
+        }
+        return low
     }
 
     private mutating func advanceCountIn(by ticks: Int) {

@@ -176,11 +176,10 @@ public final class RealtimeScheduler: @unchecked Sendable {
         timing.totalDrift += Double(drift)
         timing.maxDrift = max(timing.maxDrift, drift)
 
-        let scheduled = engine.advanceTransportAndCollectScheduledEvents(
+        engine.advanceTransport(
             by: wholeTicks,
             sequenceIndex: configuration.sequenceIndex
-        )
-        for event in scheduled {
+        ) { event in
             let packet = RealtimeScheduledPacket(
                 hostTimeNanoseconds: now &+ configuration.runnerIntervalNanoseconds,
                 event: event.event,
