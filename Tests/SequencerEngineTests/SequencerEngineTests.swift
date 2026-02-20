@@ -1791,6 +1791,111 @@ final class SequencerEngineTests: XCTestCase {
         XCTAssertEqual(heavyLoad.jitterVariance, baseline.jitterVariance, accuracy: 0.0000001)
     }
 
+    func testSongModeDeterminismRemainsStableUnderSyntheticCPULoad() {
+        var first = Sequence(name: "A")
+        first.setLoopToBar(3)
+        first.tracks = [Track(kind: .midi, events: Self.syntheticTimingEvents(channel: 0, noteStart: 60, count: 64))]
+
+        var second = Sequence(name: "B")
+        second.setLoopToBar(2)
+        second.tracks = [Track(kind: .midi, events: Self.syntheticTimingEvents(channel: 1, noteStart: 72, count: 64))]
+
+        let project = Project(
+            sequences: [first, second],
+            songs: [
+                Song(
+                    steps: [
+                        SongStep(sequenceIndex: 0, repeats: 2),
+                        SongStep(sequenceIndex: 1, repeats: 2),
+                        SongStep(sequenceIndex: 0, repeats: 1)
+                    ],
+                    endBehavior: .stopAtEnd
+                )
+            ]
+        )
+
+        let baseline = runSyntheticSongScheduling(
+            project: project,
+            songIndex: 0,
+            stepTicks: 37,
+            loadIterations: 0
+        )
+        let moderate = runSyntheticSongScheduling(
+            project: project,
+            songIndex: 0,
+            stepTicks: 37,
+            loadIterations: 20_000
+        )
+        let heavy = runSyntheticSongScheduling(
+            project: project,
+            songIndex: 0,
+            stepTicks: 37,
+            loadIterations: 40_000
+        )
+
+        XCTAssertEqual(moderate.events, baseline.events)
+        XCTAssertEqual(heavy.events, baseline.events)
+        XCTAssertEqual(moderate.maxJitterTicks, baseline.maxJitterTicks)
+        XCTAssertEqual(heavy.maxJitterTicks, baseline.maxJitterTicks)
+        XCTAssertEqual(moderate.jitterVariance, baseline.jitterVariance, accuracy: 0.0000001)
+        XCTAssertEqual(heavy.jitterVariance, baseline.jitterVariance, accuracy: 0.0000001)
+    }
+
+    func testSongModeOfflineStressHandlesSixtyThousandEventsWithoutDrops() {
+        let eventCount = 30_000
+        let stressEvents = Self.syntheticTimingEvents(channel: 0, noteStart: 60, count: eventCount)
+        XCTAssertEqual(stressEvents.count, 60_000)
+
+        let maxTick = stressEvents.last?.tick ?? 0
+        let bars = max(1, (maxTick / (Sequence.defaultPPQN * 4)) + 1)
+        var sequence = Sequence(name: "Song Stress")
+        sequence.setLoopToBar(bars)
+        sequence.tracks = [Track(kind: .midi, events: stressEvents)]
+
+        let song = Song(steps: [SongStep(sequenceIndex: 0, repeats: 1)], endBehavior: .stopAtEnd)
+        var engine = SequencerEngine(project: Project(sequences: [sequence], songs: [song]))
+        XCTAssertTrue(engine.playSong(at: 0))
+
+        var scheduled: [SequencerEngine.ScheduledEvent] = []
+        var cycles = 0
+        while engine.transport.mode != .stopped {
+            let window = 137
+            scheduled.append(contentsOf: engine.advanceTransportAndCollectScheduledEvents(by: window))
+            cycles += 1
+            XCTAssertLessThan(cycles, 20_000, "Song stress scheduling did not converge.")
+        }
+
+        XCTAssertEqual(scheduled.count, stressEvents.count)
+        XCTAssertEqual(scheduled.map(\.event), stressEvents)
+    }
+
+    func testSongModeSchedulingProducesStableHashAcrossRepeatedRuns() {
+        var first = Sequence(name: "Hash A")
+        first.setLoopToBar(2)
+        first.tracks = [Track(kind: .midi, events: Self.syntheticTimingEvents(channel: 0, noteStart: 55, count: 24))]
+
+        var second = Sequence(name: "Hash B")
+        second.setLoopToBar(2)
+        second.tracks = [Track(kind: .midi, events: Self.syntheticTimingEvents(channel: 1, noteStart: 67, count: 24))]
+
+        let song = Song(
+            steps: [
+                SongStep(sequenceIndex: 0, repeats: 2),
+                SongStep(sequenceIndex: 1, repeats: 2)
+            ],
+            endBehavior: .stopAtEnd
+        )
+        let project = Project(sequences: [first, second], songs: [song])
+
+        let hashes: [UInt64] = (0..<20).map { _ in
+            let events = collectSongScheduledEvents(project: project, songIndex: 0, stepTicks: 41)
+            return Self.stableEventHash(events)
+        }
+
+        XCTAssertFalse(hashes.isEmpty)
+        XCTAssertTrue(hashes.dropFirst().allSatisfy { $0 == hashes[0] })
+    }
+
     func testOfflineStressSchedulingHandlesSixtyThousandNoteEventsWithoutDrops() {
         let eventCount = 30_000
         let stressEvents = Self.syntheticTimingEvents(channel: 0, noteStart: 60, count: eventCount)
@@ -2037,6 +2142,12 @@ final class SequencerEngineTests: XCTestCase {
         let jitterVariance: Double
     }
 
+    private struct SongSchedulingRunResult {
+        let events: [MIDIEvent]
+        let maxJitterTicks: Int
+        let jitterVariance: Double
+    }
+
     private func runSyntheticScheduling(
         engineTemplate: SequencerEngine,
         totalTicks: Int,
@@ -2075,6 +2186,45 @@ final class SequencerEngineTests: XCTestCase {
         return SchedulingRunResult(events: events, maxJitterTicks: maxJitter, jitterVariance: variance)
     }
 
+    private func runSyntheticSongScheduling(
+        project: Project,
+        songIndex: Int,
+        stepTicks: Int,
+        loadIterations: Int
+    ) -> SongSchedulingRunResult {
+        var engine = SequencerEngine(project: project)
+        XCTAssertTrue(engine.playSong(at: songIndex))
+
+        var events: [MIDIEvent] = []
+        var jitters: [Double] = []
+        var cycles = 0
+        let window = max(1, stepTicks)
+        while engine.transport.mode != .stopped {
+            syntheticCPULoad(iterations: loadIterations + ((cycles % 5) * 2_000))
+
+            let windowStart = engine.transport.tickPosition
+            let scheduled = engine.advanceTransportAndCollectScheduledEvents(by: window)
+            let windowEnd = engine.transport.tickPosition
+            events.append(contentsOf: scheduled.map(\.event))
+
+            for event in scheduled {
+                jitters.append(Double(max(0, windowEnd - event.event.tick)))
+            }
+            cycles += 1
+            XCTAssertLessThan(cycles, 20_000, "Synthetic song scheduling did not converge.")
+            XCTAssertGreaterThanOrEqual(windowEnd, windowStart)
+        }
+
+        let maxJitter = Int(jitters.max() ?? 0)
+        let mean = jitters.reduce(0, +) / Double(max(1, jitters.count))
+        let variance = jitters.reduce(0, { partial, value in
+            let delta = value - mean
+            return partial + (delta * delta)
+        }) / Double(max(1, jitters.count))
+
+        return SongSchedulingRunResult(events: events, maxJitterTicks: maxJitter, jitterVariance: variance)
+    }
+
     private func syntheticCPULoad(iterations: Int) {
         guard iterations > 0 else {
             return
@@ -2099,6 +2249,41 @@ final class SequencerEngineTests: XCTestCase {
             events.append(.noteOff(channel: channel, note: note, velocity: 0, tick: tick + 12))
         }
         return events
+    }
+
+    private static func stableEventHash(_ events: [MIDIEvent]) -> UInt64 {
+        var hash: UInt64 = 14_695_981_039_346_656_037
+        let prime: UInt64 = 1_099_511_628_211
+
+        for event in events {
+            for byte in eventIdentity(event).utf8 {
+                hash ^= UInt64(byte)
+                hash &*= prime
+            }
+        }
+        return hash
+    }
+
+    private static func eventIdentity(_ event: MIDIEvent) -> String {
+        switch event {
+        case let .noteOn(channel, note, velocity, tick):
+            return "noteOn:\(channel):\(note):\(velocity):\(tick)"
+        case let .noteOff(channel, note, velocity, tick):
+            return "noteOff:\(channel):\(note):\(velocity):\(tick)"
+        case let .programChange(channel, program, tick):
+            return "programChange:\(channel):\(program):\(tick)"
+        case let .pitchBend(channel, value, tick):
+            return "pitchBend:\(channel):\(value):\(tick)"
+        case let .channelPressure(channel, pressure, tick):
+            return "channelPressure:\(channel):\(pressure):\(tick)"
+        case let .polyPressure(channel, note, pressure, tick):
+            return "polyPressure:\(channel):\(note):\(pressure):\(tick)"
+        case let .controlChange(channel, controller, value, tick):
+            return "controlChange:\(channel):\(controller):\(value):\(tick)"
+        case let .sysEx(data, tick):
+            let bytes = data.map { String(format: "%02X", $0) }.joined(separator: "-")
+            return "sysEx:\(bytes):\(tick)"
+        }
     }
 
     private static let smfType0FixtureBytes: [UInt8] = [
