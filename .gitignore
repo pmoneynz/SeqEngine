@@ -1,0 +1,9 @@
+.DS_Store
+.build/
+.cache/
+.swiftpm/
+build/
+
+# Ralph runtime artifacts
+.ralph/activity.log
+.ralph/errors.log

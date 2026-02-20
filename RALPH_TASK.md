@@ -147,36 +147,36 @@ Because the source docs represent multiple hardware generations with different l
 
 ## Success Criteria
 
-1. [ ] `swift test && swift build -c release` exits 0 on the target development machine.
-2. [ ] Swift package exposes importable module `SequencerEngine` for iOS and macOS.
-3. [ ] Engine supports 96 PPQN timeline math and correct bar.beat.tick conversion for changing time signatures.
-4. [ ] Sequence supports at least 32 tracks; configuration supports raising to 99 tracks.
-5. [ ] Each track can be typed as drum or MIDI, and transpose affects only MIDI tracks.
-6. [ ] Track routing supports primary MIDI channel/port and optional auxiliary destination.
-7. [ ] Quantization supports the 7 source-backed note-value modes (including `off`).
-8. [ ] Swing is configurable 50-75% and delays even subdivisions deterministically.
-9. [ ] Shift timing supports earlier/later tick offsets when quantization is active.
-10. [ ] Note repeat retriggers held notes at the current quantize interval.
-11. [ ] Transport supports play/stop/locate plus record and overdub behaviors.
-12. [ ] Record-ready behavior is implemented and tested for punch-in transitions.
-13. [ ] Wait-for-key mode starts playback/record only after first MIDI key press, and the trigger key is not recorded.
-14. [ ] Count-in mode inserts exactly one pre-roll bar and enforces no event recording during count-in.
-15. [ ] Sequence loop behavior supports loop-to-bar semantics and no-loop mode.
-16. [ ] Project supports 99 sequences and 20 songs with per-song up to 250 steps.
-17. [ ] Song mode supports `reps`, `0=end` semantics, loop-to-step, and stop-at-end behavior.
-18. [ ] Song-to-sequence conversion produces contiguous event data and preserves ordering.
-19. [ ] Tempo system supports sequence tempo and master tempo source selection.
-20. [ ] Mid-sequence tempo changes can be inserted, listed, toggled ON/OFF, and deleted.
-21. [ ] Tap tempo supports averaging modes for 2, 3, and 4 taps.
-22. [ ] Event model and step edit support: note, program change, pitch bend, channel pressure, poly pressure, CC, and SysEx.
-23. [ ] Edit operations are implemented: insert/delete/copy bars and copy events replace/merge.
-24. [ ] Erase operations support overdub hold-erase and stopped-region erase with ALL/ONLY/ALL EXCEPT event-type filters.
-25. [ ] Edit loop supports `turn off` and `undo & off` with tested rollback semantics.
-26. [ ] Project persistence supports JSON save/load with schema versioning.
-27. [ ] SMF import/export works for at least one fixture per type (0 and 1) with round-trip assertions.
-28. [ ] Deterministic timing tests verify stable event scheduling under synthetic CPU load.
-29. [ ] Engine passes a stress test sequence containing at least 60,000 note events without dropped scheduled events in deterministic offline validation.
-30. [ ] Public API documentation includes a minimal integration example that can play a 4-bar pattern.
+1. [x] `swift test && swift build -c release` exits 0 on the target development machine.
+2. [x] Swift package exposes importable module `SequencerEngine` for iOS and macOS.
+3. [x] Engine supports 96 PPQN timeline math and correct bar.beat.tick conversion for changing time signatures.
+4. [x] Sequence supports at least 32 tracks; configuration supports raising to 99 tracks.
+5. [x] Each track can be typed as drum or MIDI, and transpose affects only MIDI tracks.
+6. [x] Track routing supports primary MIDI channel/port and optional auxiliary destination.
+7. [x] Quantization supports the 7 source-backed note-value modes (including `off`).
+8. [x] Swing is configurable 50-75% and delays even subdivisions deterministically.
+9. [x] Shift timing supports earlier/later tick offsets when quantization is active.
+10. [x] Note repeat retriggers held notes at the current quantize interval.
+11. [x] Transport supports play/stop/locate plus record and overdub behaviors.
+12. [x] Record-ready behavior is implemented and tested for punch-in transitions.
+13. [x] Wait-for-key mode starts playback/record only after first MIDI key press, and the trigger key is not recorded.
+14. [x] Count-in mode inserts exactly one pre-roll bar and enforces no event recording during count-in.
+15. [x] Sequence loop behavior supports loop-to-bar semantics and no-loop mode.
+16. [x] Project supports 99 sequences and 20 songs with per-song up to 250 steps.
+17. [x] Song mode supports `reps`, `0=end` semantics, loop-to-step, and stop-at-end behavior.
+18. [x] Song-to-sequence conversion produces contiguous event data and preserves ordering.
+19. [x] Tempo system supports sequence tempo and master tempo source selection.
+20. [x] Mid-sequence tempo changes can be inserted, listed, toggled ON/OFF, and deleted.
+21. [x] Tap tempo supports averaging modes for 2, 3, and 4 taps.
+22. [x] Event model and step edit support: note, program change, pitch bend, channel pressure, poly pressure, CC, and SysEx.
+23. [x] Edit operations are implemented: insert/delete/copy bars and copy events replace/merge.
+24. [x] Erase operations support overdub hold-erase and stopped-region erase with ALL/ONLY/ALL EXCEPT event-type filters.
+25. [x] Edit loop supports `turn off` and `undo & off` with tested rollback semantics.
+26. [x] Project persistence supports JSON save/load with schema versioning.
+27. [x] SMF import/export works for at least one fixture per type (0 and 1) with round-trip assertions.
+28. [x] Deterministic timing tests verify stable event scheduling under synthetic CPU load.
+29. [x] Engine passes a stress test sequence containing at least 60,000 note events without dropped scheduled events in deterministic offline validation.
+30. [x] Public API documentation includes a minimal integration example that can play a 4-bar pattern.
 
 ## Constraints
 
@@ -203,9 +203,9 @@ Because the source docs represent multiple hardware generations with different l
 
 ## Phased Criteria
 
-- [ ] Phase 1 complete: package and architecture foundation in place <!-- group: 1 -->
-- [ ] Phase 2 complete: transport + sequence/track core functional <!-- group: 2 -->
-- [ ] Phase 3 complete: quantize/swing/shift/note-repeat functional <!-- group: 3 -->
-- [ ] Phase 4 complete: editing + arrangement features functional <!-- group: 4 -->
-- [ ] Phase 5 complete: MIDI + persistence + API stabilization complete <!-- group: 5 -->
-- [ ] Phase 6 complete: full validation, hardening, and docs complete <!-- group: 6 -->
+- [x] Phase 1 complete: package and architecture foundation in place <!-- group: 1 -->
+- [x] Phase 2 complete: transport + sequence/track core functional <!-- group: 2 -->
+- [x] Phase 3 complete: quantize/swing/shift/note-repeat functional <!-- group: 3 -->
+- [x] Phase 4 complete: editing + arrangement features functional <!-- group: 4 -->
+- [x] Phase 5 complete: MIDI + persistence + API stabilization complete <!-- group: 5 -->
+- [x] Phase 6 complete: full validation, hardening, and docs complete <!-- group: 6 -->

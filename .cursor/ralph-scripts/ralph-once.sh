@@ -1,46 +1,16 @@
 #!/bin/bash
-# Run one safe Super Ralph preflight iteration.
+# Run exactly one autonomous Super Ralph iteration.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/ralph-common.sh"
+
 WORKSPACE="${1:-$(pwd)}"
 WORKSPACE="$(cd "$WORKSPACE" && pwd)"
 
-TASK_FILE="$WORKSPACE/RALPH_TASK.md"
-PROGRESS_FILE="$WORKSPACE/.ralph/progress.md"
-GATES_SCRIPT="$SCRIPT_DIR/harness-gates.sh"
-
-if [[ ! -f "$TASK_FILE" ]]; then
-  echo "Missing required task file: $TASK_FILE"
-  exit 1
-fi
-
-if [[ ! -d "$WORKSPACE/.git" ]]; then
-  echo "Not a git repository: $WORKSPACE"
-  exit 1
-fi
-
-if [[ ! -x "$GATES_SCRIPT" ]]; then
-  echo "Harness gates script not executable: $GATES_SCRIPT"
-  exit 1
-fi
-
-mkdir -p "$WORKSPACE/.ralph"
-touch "$PROGRESS_FILE"
-
-echo "== Ralph once: preflight =="
+echo "== Ralph once =="
 echo "workspace: $WORKSPACE"
-echo "task:      $TASK_FILE"
+echo "model:     ${RALPH_MODEL:-gpt-5.2-high}"
 
-# Safe trial iteration: enforce harness gates before autonomous looping.
-bash "$GATES_SCRIPT" "$WORKSPACE"
-
-{
-  echo ""
-  echo "## $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-  echo "- action: ralph-once preflight"
-  echo "- result: harness gates passed"
-} >> "$PROGRESS_FILE"
-
-echo "Preflight complete. Ready for loop execution."
+run_ralph_loop "$WORKSPACE" "$SCRIPT_DIR" "1"

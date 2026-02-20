@@ -1,5 +1,8 @@
 # Documentation Index
 
+## API
+- `../README.md`
+
 ## Architecture
 - `design-docs/architecture-contract.md`
 

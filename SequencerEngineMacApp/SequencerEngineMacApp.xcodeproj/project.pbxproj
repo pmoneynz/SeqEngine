@@ -1,0 +1,256 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A8A8A8A8A8A8A8A8A8A8A8A8 /* SequencerEngineMacAppApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6A6A6A6A6A6A6A6A6A6A6A6 /* SequencerEngineMacAppApp.swift */; };
+		A9A9A9A9A9A9A9A9A9A9A9A9 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7A7A7A7A7A7A7A7A7A7A7A7 /* ContentView.swift */; };
+		AAAAAAAAAAAAAAAAAAAAAAAA /* SequencerEngine in Frameworks */ = {isa = PBXBuildFile; productRef = B7B7B7B7B7B7B7B7B7B7B7B7 /* SequencerEngine */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A5A5A5A5A5A5A5A5A5A5A5A5 /* SequencerEngineMacApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SequencerEngineMacApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A6A6A6A6A6A6A6A6A6A6A6A6 /* SequencerEngineMacAppApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SequencerEngineMacAppApp.swift; sourceTree = "<group>"; };
+		A7A7A7A7A7A7A7A7A7A7A7A7 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		ABABABABABABABABABABABAB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AAAAAAAAAAAAAAAAAAAAAAAA /* SequencerEngine in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A2A2A2A2A2A2A2A2A2A2A2A2 = {
+			isa = PBXGroup;
+			children = (
+				A4A4A4A4A4A4A4A4A4A4A4A4 /* SequencerEngineMacApp */,
+				A3A3A3A3A3A3A3A3A3A3A3A3 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A3A3A3A3A3A3A3A3A3A3A3A3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A5A5A5A5A5A5A5A5A5A5A5A5 /* SequencerEngineMacApp.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A4A4A4A4A4A4A4A4A4A4A4A4 /* SequencerEngineMacApp */ = {
+			isa = PBXGroup;
+			children = (
+				A6A6A6A6A6A6A6A6A6A6A6A6 /* SequencerEngineMacAppApp.swift */,
+				A7A7A7A7A7A7A7A7A7A7A7A7 /* ContentView.swift */,
+			);
+			path = SequencerEngineMacApp;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AEAEAEAEAEAEAEAEAEAEAEAE /* SequencerEngineMacApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B1B1B1B1B1B1B1B1B1B1B1B1 /* Build configuration list for PBXNativeTarget "SequencerEngineMacApp" */;
+			buildPhases = (
+				ADADADADADADADADADADADAD /* Sources */,
+				ABABABABABABABABABABABAB /* Frameworks */,
+				ACACACACACACACACACACACAC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+			);
+			name = SequencerEngineMacApp;
+			packageProductDependencies = (
+				B7B7B7B7B7B7B7B7B7B7B7B7 /* SequencerEngine */,
+			);
+			productName = SequencerEngineMacApp;
+			productReference = A5A5A5A5A5A5A5A5A5A5A5A5 /* SequencerEngineMacApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A1A1A1A1A1A1A1A1A1A1A1A1 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2611;
+				LastUpgradeCheck = 2611;
+				TargetAttributes = {
+					AEAEAEAEAEAEAEAEAEAEAEAE = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
+				};
+			};
+			buildConfigurationList = AFAFAFAFAFAFAFAFAFAFAFAF /* Build configuration list for PBXProject "SequencerEngineMacApp" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A2A2A2A2A2A2A2A2A2A2A2A2;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				B6B6B6B6B6B6B6B6B6B6B6B6 /* XCLocalSwiftPackageReference ".." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = A3A3A3A3A3A3A3A3A3A3A3A3 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AEAEAEAEAEAEAEAEAEAEAEAE /* SequencerEngineMacApp */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		ACACACACACACACACACACACAC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		ADADADADADADADADADADADAD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A9A9A9A9A9A9A9A9A9A9A9A9 /* ContentView.swift in Sources */,
+				A8A8A8A8A8A8A8A8A8A8A8A8 /* SequencerEngineMacAppApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		B2B2B2B2B2B2B2B2B2B2B2B2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		B3B3B3B3B3B3B3B3B3B3B3B3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		B4B4B4B4B4B4B4B4B4B4B4B4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sequencerengine.SequencerEngineMacApp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		B5B5B5B5B5B5B5B5B5B5B5B5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sequencerengine.SequencerEngineMacApp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AFAFAFAFAFAFAFAFAFAFAFAF /* Build configuration list for PBXProject "SequencerEngineMacApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B2B2B2B2B2B2B2B2B2B2B2B2 /* Debug */,
+				B3B3B3B3B3B3B3B3B3B3B3B3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B1B1B1B1B1B1B1B1B1B1B1B1 /* Build configuration list for PBXNativeTarget "SequencerEngineMacApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B4B4B4B4B4B4B4B4B4B4B4B4 /* Debug */,
+				B5B5B5B5B5B5B5B5B5B5B5B5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		B6B6B6B6B6B6B6B6B6B6B6B6 /* XCLocalSwiftPackageReference ".." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ..;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B7B7B7B7B7B7B7B7B7B7B7B7 /* SequencerEngine */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B6B6B6B6B6B6B6B6B6B6B6B6 /* XCLocalSwiftPackageReference ".." */;
+			productName = SequencerEngine;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = A1A1A1A1A1A1A1A1A1A1A1A1 /* Project object */;
+}
