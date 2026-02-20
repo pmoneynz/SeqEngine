@@ -877,6 +877,37 @@ final class SequencerEngineTests: XCTestCase {
         }
     }
 
+    func testSongModeSchedulingParityAcrossOneThousandSeededFixtures() throws {
+        var rng = DeterministicRNG(seed: 0x5EED_F17E_0E55)
+
+        for fixtureIndex in 0..<1_000 {
+            let project = makeSeededSongParityFixture(rng: &rng)
+            let stepTicks = 17 + rng.nextInt(64)
+
+            let songEvents = collectSongScheduledEvents(
+                project: project,
+                songIndex: 0,
+                stepTicks: stepTicks
+            )
+            let flattenedEvents = try collectFlattenedOracleEvents(
+                project: project,
+                songIndex: 0,
+                stepTicks: stepTicks
+            )
+
+            XCTAssertEqual(
+                songEvents.count,
+                flattenedEvents.count,
+                "Seeded fixture \(fixtureIndex) emitted mismatched event count."
+            )
+            XCTAssertEqual(
+                songEvents.map(Self.ticklessEventIdentity),
+                flattenedEvents.map(Self.ticklessEventIdentity),
+                "Seeded fixture \(fixtureIndex) emitted mismatched ordering/payload."
+            )
+        }
+    }
+
     func testSongToSequenceConversionProducesContiguousTimelineAndPreservesOrdering() throws {
         var first = Sequence(name: "Verse")
         first.setLoopToBar(1)
@@ -2063,6 +2094,90 @@ final class SequencerEngineTests: XCTestCase {
         XCTAssertEqual(roundTripped.ppqn, imported.ppqn)
         XCTAssertEqual(roundTripped.tracks.count, imported.tracks.count)
         XCTAssertEqual(roundTripped.tracks.map(\.events), imported.tracks.map(\.events))
+    }
+
+    private struct DeterministicRNG {
+        private var state: UInt64
+
+        init(seed: UInt64) {
+            state = seed == 0 ? 0x9E37_79B9_7F4A_7C15 : seed
+        }
+
+        mutating func nextUInt64() -> UInt64 {
+            state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+            return state
+        }
+
+        mutating func nextInt(_ upperBound: Int) -> Int {
+            guard upperBound > 0 else {
+                return 0
+            }
+            return Int(nextUInt64() % UInt64(upperBound))
+        }
+    }
+
+    private func makeSeededSongParityFixture(rng: inout DeterministicRNG) -> Project {
+        let first = makeSeededSequence(name: "Seed A", rng: &rng)
+        let second = makeSeededSequence(name: "Seed B", rng: &rng)
+
+        let materializedStepCount = 2 + rng.nextInt(3)
+        var steps: [SongStep] = []
+        steps.reserveCapacity(materializedStepCount + 1)
+        for _ in 0..<materializedStepCount {
+            steps.append(
+                SongStep(
+                    sequenceIndex: rng.nextInt(2),
+                    repeats: 1 + rng.nextInt(3)
+                )
+            )
+        }
+        // Explicit end marker keeps fixture playback finite and deterministic.
+        steps.append(SongStep(sequenceIndex: 0, repeats: 0))
+
+        let song = Song(name: "Seeded Song", steps: steps, endBehavior: .stopAtEnd)
+        return Project(sequences: [first, second], songs: [song])
+    }
+
+    private func makeSeededSequence(name: String, rng: inout DeterministicRNG) -> Sequence {
+        var sequence = Sequence(name: name)
+        sequence.setLoopToBar(1)
+
+        let notePairCount = 1 + rng.nextInt(4)
+        var events: [MIDIEvent] = []
+        events.reserveCapacity(notePairCount * 3)
+
+        for pairIndex in 0..<notePairCount {
+            let startTick = min(383, (rng.nextInt(16) * 24) + rng.nextInt(12))
+            let duration = 6 + rng.nextInt(24)
+            let endTick = min(383, startTick + duration)
+            let channel = UInt8(rng.nextInt(4))
+            let note = UInt8(48 + rng.nextInt(36))
+            let velocity = UInt8(40 + rng.nextInt(80))
+
+            events.append(.noteOn(channel: channel, note: note, velocity: velocity, tick: startTick))
+            events.append(.noteOff(channel: channel, note: note, velocity: 0, tick: endTick))
+
+            if pairIndex.isMultiple(of: 2) {
+                events.append(
+                    .controlChange(
+                        channel: channel,
+                        controller: UInt8(rng.nextInt(32)),
+                        value: UInt8(rng.nextInt(128)),
+                        tick: startTick
+                    )
+                )
+            }
+        }
+
+        let orderedEvents = events.enumerated().sorted { lhs, rhs in
+            if lhs.element.tick != rhs.element.tick {
+                return lhs.element.tick < rhs.element.tick
+            }
+            return lhs.offset < rhs.offset
+        }.map(\.element)
+
+        sequence.tracks = [Track(name: "\(name) Track", kind: .midi, events: orderedEvents)]
+        return sequence
     }
 
     private func collectSongScheduledEvents(

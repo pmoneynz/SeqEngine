@@ -91,7 +91,7 @@ gh run list --limit 20
 ```
 
 ### Day 4 - PR-03 start: determinism and stress hardening (song mode)
-- [ ] Add deterministic seeded fixture generator for song-mode scheduling.
+- [x] Add deterministic seeded fixture generator for song-mode scheduling.
 - [x] Add stress test target for large multi-step songs.
 - [x] Add repeated-run hash test for deterministic output.
 
