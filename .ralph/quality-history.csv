@@ -1,4 +1,0 @@
-week,lead_time_hours,change_failure_rate,mttr_hours,pr_cycle_count,pre_human_catch_rate,architecture_violations,soak_tier,soak_runtime_seconds,soak_max_drift_ns,soak_avg_drift_ns,soak_dropped_packets
-2026-W07,0,0,0,0,0,0,none,0,0,0,0
-2026-W08,0,0,0,0,0,0,short,1,0,0,0
-2026-W08,0,0,0,0,0,0,medium,1,0,0,0

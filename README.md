@@ -20,7 +20,7 @@ This package follows Semantic Versioning for `SequencerEngine` and `SequencerEng
 
 Public APIs are deprecated for at least one minor release before removal, except for urgent security/correctness fixes. The stable realtime integration boundary is protocol-based (`MIDIInput`, `MIDIOutput`, `RealtimeSessioning`), while concrete CoreMIDI adapters remain provisional implementations behind that facade.
 
-CI enforces API breakage checks with `harness/quality/check-api-diff.sh`. See `docs/api-stability.md` for details.
+Run `swift package diagnose-api-breaking-changes` against `origin/main` in CI to detect public API breakage. See `docs/api-stability.md` for details.
 
 ## Minimal Integration (4-bar playback)
 

@@ -1,6 +1,6 @@
 # Architecture Contract
 
-This repository enforces layered architecture as a mechanical gate.
+This repository follows layered architecture by convention and code review.
 
 ## Layers
 - `domain`: core business logic, no framework coupling.
@@ -22,6 +22,6 @@ Disallowed:
 - `interface -> infrastructure` (except explicit approved edges)
 
 ## Approved Edge Process
-1. Add proposed edge to `harness/architecture/contract.yaml` under `approved_edges`.
-2. Add rationale to `.ralph/governance-decisions.md`.
-3. Run `harness/architecture/check-boundaries.sh` and include output in PR evidence.
+1. Document the proposed edge in this file.
+2. Include a short rationale in the pull request.
+3. Add or update tests that prove the new dependency is necessary and safe.

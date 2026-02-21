@@ -3,8 +3,3 @@
 .cache/
 .swiftpm/
 build/
-
-# Ralph runtime artifacts
-.ralph/activity.log
-.ralph/errors.log
-.ralph/soak-metrics.json

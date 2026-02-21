@@ -18,8 +18,6 @@ The protocol facades `MIDIInput`, `MIDIOutput`, and `RealtimeSessioning` are the
 
 ## Breaking Change Gate
 
-API breakage is checked in CI with:
+API breakage should be checked in CI with `swift package diagnose-api-breaking-changes`.
 
-- `harness/quality/check-api-diff.sh`
-
-This gate runs `swift package diagnose-api-breaking-changes` against a baseline treeish (default `origin/main`) for `SequencerEngine` and `SequencerEngineIO`.
+Run this check against a baseline treeish (usually `origin/main`) for `SequencerEngine` and `SequencerEngineIO`.
