@@ -111,27 +111,3 @@ public struct RealtimeSchedulerSnapshot: Sendable, Equatable {
     }
 }
 
-public protocol RealtimePacketSink: Sendable {
-    func consume(_ packet: RealtimeScheduledPacket)
-}
-
-public protocol MIDIOutput: RealtimePacketSink {
-    func send(event: MIDIEvent) throws
-    func send(packet: RealtimeScheduledPacket) throws
-}
-
-public protocol MIDIInput: Sendable {
-    func setOnEvent(_ callback: ((MIDIEvent) -> Void)?)
-    func pollEvents(_ body: (MIDIEvent) -> Void)
-}
-
-public protocol RealtimeSessioning: Sendable {
-    var scheduler: RealtimeScheduler { get }
-    func start()
-    func stop()
-    @discardableResult
-    func submit(_ command: RealtimeControlCommand) -> Bool
-    func snapshot() -> RealtimeSchedulerSnapshot
-    func pollIncomingMIDI()
-    func drainScheduledPackets(_ body: (RealtimeScheduledPacket) -> Void)
-}
