@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - main
+  schedule:
+    - cron: "0 3 * * *"
+    - cron: "0 4 * * 0"
 
 jobs:
   governance-and-quality:
@@ -40,6 +43,42 @@ jobs:
 
       - name: Release Build Validation
         run: swift build -c release
+
+  soak-short:
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Short Soak Tier
+        run: bash harness/quality/run-soak-tests.sh "$PWD" ci
+
+  soak-medium:
+    if: github.event_name == 'schedule' && github.event.schedule == '0 3 * * *'
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Medium Soak Tier
+        run: bash harness/quality/run-soak-tests.sh "$PWD" nightly
+
+  soak-long:
+    if: github.event_name == 'schedule' && github.event.schedule == '0 4 * * 0'
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Long Soak Tier
+        run: bash harness/quality/run-soak-tests.sh "$PWD" weekly
 
   api-diff:
     runs-on: macos-latest

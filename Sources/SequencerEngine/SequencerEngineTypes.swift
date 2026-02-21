@@ -6,12 +6,20 @@ extension SequencerEngine {
         public var trackIndex: Int
         public var eventIndex: Int
         public var event: MIDIEvent
+        public var windowOffsetTicks: Int
 
-        public init(sequenceIndex: Int, trackIndex: Int, eventIndex: Int, event: MIDIEvent) {
+        public init(
+            sequenceIndex: Int,
+            trackIndex: Int,
+            eventIndex: Int,
+            event: MIDIEvent,
+            windowOffsetTicks: Int = 0
+        ) {
             self.sequenceIndex = sequenceIndex
             self.trackIndex = trackIndex
             self.eventIndex = eventIndex
             self.event = event
+            self.windowOffsetTicks = max(0, windowOffsetTicks)
         }
     }
 

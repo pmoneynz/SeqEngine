@@ -70,6 +70,8 @@ final class RealtimeSchedulerTests: XCTestCase {
         XCTAssertEqual(snapshot.transport.mode, .playing)
         XCTAssertGreaterThan(snapshot.transport.tickPosition, 0)
         XCTAssertEqual(sink.packets.first?.event, .noteOn(channel: 1, note: 60, velocity: 100, tick: 0))
+        XCTAssertGreaterThanOrEqual(sink.packets.count, 2)
+        XCTAssertGreaterThan(sink.packets[1].hostTimeNanoseconds, sink.packets[0].hostTimeNanoseconds)
     }
 
     func testOutputQueueOverflowTracksDrops() {
@@ -151,5 +153,65 @@ final class RealtimeSchedulerTests: XCTestCase {
         }
 
         XCTAssertEqual(streamed, wrapped)
+    }
+
+    func testScheduledPacketHostTimesMatchExpectedTickSpacingWithinTolerance() {
+        let ppqn = Sequence.defaultPPQN
+        var track = Track(name: "Timing", kind: .midi)
+        track.events = [
+            .noteOn(channel: 1, note: 60, velocity: 100, tick: 0),
+            .noteOn(channel: 1, note: 62, velocity: 100, tick: 12),
+            .noteOn(channel: 1, note: 64, velocity: 100, tick: 24)
+        ]
+        let sequence = Sequence(name: "Timing Sequence", ppqn: ppqn, tracks: [track])
+        let engine = SequencerEngine(project: Project(sequences: [sequence]))
+
+        let tempoBPM = 120.0
+        let ticksPerSecond = (tempoBPM / 60.0) * Double(ppqn) // 192.0 at 120 BPM, 96 PPQN
+        let expectedNanosecondsPerTick = 1_000_000_000.0 / ticksPerSecond
+        let toleranceNanoseconds: UInt64 = 4_000
+
+        let clock = TestClock(startNanoseconds: 0)
+        let sink = PacketSink()
+        let scheduler = RealtimeScheduler(
+            engine: engine,
+            configuration: RealtimeSchedulerConfiguration(
+                ppqn: ppqn,
+                sequenceIndex: 0,
+                runnerIntervalNanoseconds: 1_000_000
+            ),
+            clock: clock,
+            packetSink: sink
+        )
+
+        XCTAssertTrue(scheduler.submit(.setTempoSource(.master)))
+        XCTAssertTrue(scheduler.submit(.setMasterTempoBPM(tempoBPM)))
+        XCTAssertTrue(scheduler.submit(.play))
+
+        scheduler.processCycleForTesting() // Establish baseline and apply commands.
+
+        // Use one larger cycle so all events are emitted from the same scheduling window.
+        clock.advance(by: 200_000_000) // ~38 ticks at 120 BPM / 96 PPQN.
+        scheduler.processCycleForTesting()
+
+        XCTAssertGreaterThanOrEqual(sink.packets.count, 3)
+        let firstThree = Array(sink.packets.prefix(3))
+        XCTAssertEqual(
+            firstThree.map(\.event),
+            [
+                .noteOn(channel: 1, note: 60, velocity: 100, tick: 0),
+                .noteOn(channel: 1, note: 62, velocity: 100, tick: 12),
+                .noteOn(channel: 1, note: 64, velocity: 100, tick: 24)
+            ]
+        )
+
+        let delta1 = Int64(firstThree[1].hostTimeNanoseconds) - Int64(firstThree[0].hostTimeNanoseconds)
+        let delta2 = Int64(firstThree[2].hostTimeNanoseconds) - Int64(firstThree[1].hostTimeNanoseconds)
+        let expectedDelta = UInt64((Double(12) * expectedNanosecondsPerTick).rounded())
+
+        let error1 = UInt64(abs(delta1 - Int64(expectedDelta)))
+        let error2 = UInt64(abs(delta2 - Int64(expectedDelta)))
+        XCTAssertLessThanOrEqual(error1, toleranceNanoseconds)
+        XCTAssertLessThanOrEqual(error2, toleranceNanoseconds)
     }
 }

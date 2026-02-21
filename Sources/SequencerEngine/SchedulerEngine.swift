@@ -108,22 +108,29 @@ extension SequencerEngine {
 
         var rangeStart = clampedStartTick
         var wrappedStart = loopLength.map { clampedStartTick % max(1, $0) } ?? clampedStartTick
+        var consumedBeforeCurrentRange = 0
 
         while remaining > 0 {
             let rangeEnd: Int
+            let segmentDuration: Int
             if let loopLength, loopLength > 0 {
                 let ticksUntilWrap = max(1, loopLength - wrappedStart)
                 let consumed = min(remaining, ticksUntilWrap)
                 rangeEnd = wrappedStart + consumed
+                segmentDuration = consumed
                 rangeStart = wrappedStart
                 wrappedStart = (wrappedStart + consumed) % loopLength
                 remaining -= consumed
             } else {
                 rangeEnd = rangeStart + remaining
+                segmentDuration = remaining
                 remaining = 0
             }
 
             for trackIndex in sequence.tracks.indices {
+                guard trackIndex < schedulingMergeCursors.count else {
+                    continue
+                }
                 let track = sequence.tracks[trackIndex]
                 schedulingMergeCursors[trackIndex] = firstEventIndex(in: track.events, atOrAfter: rangeStart)
             }
@@ -134,6 +141,9 @@ extension SequencerEngine {
                 var bestTick = Int.max
 
                 for trackIndex in sequence.tracks.indices {
+                    guard trackIndex < schedulingMergeCursors.count else {
+                        continue
+                    }
                     let track = sequence.tracks[trackIndex]
                     let eventIndex = schedulingMergeCursors[trackIndex]
                     guard eventIndex < track.events.count else {
@@ -154,15 +164,23 @@ extension SequencerEngine {
                 guard bestTrackIndex >= 0 else {
                     break
                 }
+                guard bestTrackIndex < sequence.tracks.count else {
+                    break
+                }
 
                 let track = sequence.tracks[bestTrackIndex]
+                guard bestEventIndex < track.events.count else {
+                    schedulingMergeCursors[bestTrackIndex] = track.events.count
+                    continue
+                }
                 let event = track.events[bestEventIndex]
                 emit(
                     ScheduledEvent(
                         sequenceIndex: sequenceIndex,
                         trackIndex: bestTrackIndex,
                         eventIndex: bestEventIndex,
-                        event: event
+                        event: event,
+                        windowOffsetTicks: consumedBeforeCurrentRange + max(0, event.tick - rangeStart)
                     )
                 )
                 schedulingMergeCursors[bestTrackIndex] = bestEventIndex + 1
@@ -171,6 +189,7 @@ extension SequencerEngine {
             if loopLength == nil {
                 break
             }
+            consumedBeforeCurrentRange += segmentDuration
         }
     }
 

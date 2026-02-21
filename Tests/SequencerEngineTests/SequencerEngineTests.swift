@@ -107,6 +107,39 @@ final class SequencerEngineTests: XCTestCase {
         XCTAssertEqual(engine.handleIncomingMIDI(captured), captured)
     }
 
+    func testHandleIncomingMIDIPersistsRecordedEventAtCurrentTransportTick() {
+        let sequence = Sequence(tracks: [Track(kind: .midi, events: [])])
+        var engine = SequencerEngine(project: Project(sequences: [sequence]))
+
+        engine.record()
+        engine.locate(tick: 120)
+        let incoming = MIDIEvent.noteOn(channel: 0, note: 60, velocity: 100, tick: 0)
+        let captured = engine.handleIncomingMIDI(incoming)
+
+        XCTAssertEqual(captured, incoming)
+        XCTAssertEqual(
+            engine.project.sequences[0].tracks[0].events,
+            [.noteOn(channel: 0, note: 60, velocity: 100, tick: 120)]
+        )
+    }
+
+    func testHandleIncomingMIDICreatesMIDITrackWhenOverdubbingSequenceHasNoTracks() {
+        var engine = SequencerEngine(project: Project(sequences: [Sequence()]))
+
+        engine.overdub()
+        engine.locate(tick: 64)
+        let incoming = MIDIEvent.controlChange(channel: 1, controller: 74, value: 99, tick: 999)
+        let captured = engine.handleIncomingMIDI(incoming)
+
+        XCTAssertEqual(captured, incoming)
+        XCTAssertEqual(engine.project.sequences[0].tracks.count, 1)
+        XCTAssertEqual(engine.project.sequences[0].tracks[0].kind, .midi)
+        XCTAssertEqual(
+            engine.project.sequences[0].tracks[0].events,
+            [.controlChange(channel: 1, controller: 74, value: 99, tick: 64)]
+        )
+    }
+
     func testWaitForKeyIgnoresNonKeyMessagesBeforeTrigger() {
         var engine = SequencerEngine()
         engine.armWaitForKey()
@@ -1056,6 +1089,92 @@ final class SequencerEngineTests: XCTestCase {
         XCTAssertEqual(mapper.ticksPerBeat(for: TimeSignature(numerator: 6, denominator: 8)), 48)
         XCTAssertEqual(mapper.toTick(BarBeatTick(bar: 1, beat: 2, tick: 0)), 48)
         XCTAssertEqual(mapper.toBarBeatTick(tick: 287), BarBeatTick(bar: 1, beat: 6, tick: 47))
+    }
+
+    func testTimelineInitializersSanitizeInvalidValuesInsteadOfCrashing() {
+        let signature = TimeSignature(numerator: 0, denominator: 3)
+        XCTAssertEqual(signature.numerator, 1)
+        XCTAssertEqual(signature.denominator, 4)
+
+        let change = TimeSignatureChange(bar: -4, signature: signature)
+        XCTAssertEqual(change.bar, 1)
+
+        let position = BarBeatTick(bar: 0, beat: 0, tick: -1)
+        XCTAssertEqual(position.bar, 1)
+        XCTAssertEqual(position.beat, 1)
+        XCTAssertEqual(position.tick, 0)
+
+        let mapper = TimelineMapper(ppqn: 0, changes: [])
+        XCTAssertEqual(mapper.ppqn, 1)
+    }
+
+    func testTimelineValidatedConversionsReturnRecoverableErrors() {
+        let mapper = TimelineMapper(
+            ppqn: Sequence.defaultPPQN,
+            changes: [TimeSignatureChange(bar: 1, signature: TimeSignature(numerator: 4, denominator: 4))]
+        )
+
+        var badBeat = BarBeatTick(bar: 1, beat: 1, tick: 0)
+        badBeat.beat = 5
+        XCTAssertThrowsError(try mapper.toTickValidated(badBeat)) { error in
+            XCTAssertEqual(error as? TimelineError, .beatOutOfRange(maxBeat: 4, provided: 5))
+        }
+
+        var badTick = BarBeatTick(bar: 1, beat: 1, tick: 0)
+        badTick.tick = 96
+        XCTAssertThrowsError(try mapper.toTickValidated(badTick)) { error in
+            XCTAssertEqual(error as? TimelineError, .tickOutOfRange(maxTickExclusive: 96, provided: 96))
+        }
+
+        XCTAssertThrowsError(try mapper.toBarBeatTickValidated(tick: -1)) { error in
+            XCTAssertEqual(error as? TimelineError, .invalidTick)
+        }
+    }
+
+    func testTimelineNonThrowingConversionsFallbackToSafeDefaults() {
+        let mapper = TimelineMapper(
+            ppqn: Sequence.defaultPPQN,
+            changes: [TimeSignatureChange(bar: 1, signature: TimeSignature(numerator: 4, denominator: 4))]
+        )
+        var invalid = BarBeatTick(bar: 1, beat: 1, tick: 0)
+        invalid.beat = 999
+        invalid.tick = 999
+
+        XCTAssertEqual(mapper.toTick(invalid), 0)
+        XCTAssertEqual(mapper.toBarBeatTick(tick: -99), BarBeatTick(bar: 1, beat: 1, tick: 0))
+    }
+
+    func testSongPlaybackStopsGracefullyWhenSequenceDisappearsMidPlayback() {
+        var sequence = Sequence(name: "A")
+        sequence.setLoopToBar(1)
+        sequence.tracks = [Track(kind: .midi, events: [.noteOn(channel: 0, note: 60, velocity: 100, tick: 0)])]
+        let song = Song(steps: [SongStep(sequenceIndex: 0, repeats: 2)], endBehavior: .stopAtEnd)
+        var engine = SequencerEngine(project: Project(sequences: [sequence], songs: [song]))
+
+        XCTAssertTrue(engine.playSong(at: 0))
+        engine.project.sequences = []
+        let scheduled = engine.advanceTransportAndCollectScheduledEvents(by: 48)
+
+        XCTAssertTrue(scheduled.isEmpty)
+        XCTAssertEqual(engine.transport.mode, .stopped)
+        XCTAssertNil(engine.transport.activeSongIndex)
+    }
+
+    func testSchedulerRemainsStableWhenTrackCountShrinksAfterCursorWarmup() {
+        let sequence = Sequence(
+            tracks: [
+                Track(kind: .midi, events: [.noteOn(channel: 0, note: 60, velocity: 100, tick: 0)]),
+                Track(kind: .midi, events: [.noteOn(channel: 1, note: 62, velocity: 100, tick: 12)])
+            ]
+        )
+        var engine = SequencerEngine(project: Project(sequences: [sequence]))
+        engine.play()
+
+        _ = engine.advanceTransportAndCollectScheduledEvents(by: 1, sequenceIndex: 0)
+        engine.project.sequences[0].tracks = [engine.project.sequences[0].tracks[0]]
+
+        let scheduled = engine.advanceTransportAndCollectScheduledEvents(by: 24, sequenceIndex: 0)
+        XCTAssertNotNil(scheduled)
     }
 
     func testMidiTrackTransposeAffectsNoteEventsOnly() {

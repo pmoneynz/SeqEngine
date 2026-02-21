@@ -53,6 +53,31 @@ if f("change_failure_rate") > p("change_failure_rate"):
 if f("architecture_violations") > p("architecture_violations"):
     violations.append("architecture_violations increased week-over-week")
 
+soak_tier = (last.get("soak_tier") or "").strip().lower()
+if soak_tier and soak_tier != "none":
+    soak_dropped = f("soak_dropped_packets")
+    soak_max_drift = f("soak_max_drift_ns")
+    soak_avg_drift = f("soak_avg_drift_ns")
+
+    if soak_dropped > 0:
+        violations.append("soak_dropped_packets > 0")
+
+    max_drift_limit = {
+        "short": 1_000_000,
+        "medium": 2_000_000,
+        "long": 5_000_000,
+    }.get(soak_tier, 2_000_000)
+    avg_drift_limit = {
+        "short": 100_000,
+        "medium": 200_000,
+        "long": 500_000,
+    }.get(soak_tier, 200_000)
+
+    if soak_max_drift > max_drift_limit:
+        violations.append(f"soak_max_drift_ns exceeded {max_drift_limit} for tier={soak_tier}")
+    if soak_avg_drift > avg_drift_limit:
+        violations.append(f"soak_avg_drift_ns exceeded {avg_drift_limit} for tier={soak_tier}")
+
 if violations:
     print("Kill criteria warning:")
     for v in violations:

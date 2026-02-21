@@ -126,6 +126,10 @@ extension SequencerEngine {
             let consumed = min(remainingTicks, remainingInRepeat)
 
             if let emit {
+                guard step.sequenceIndex >= 0, step.sequenceIndex < project.sequences.count else {
+                    stopSongPlayback()
+                    return true
+                }
                 let sequence = project.sequences[step.sequenceIndex]
                 emitScheduledEvents(
                     sequenceIndex: step.sequenceIndex,

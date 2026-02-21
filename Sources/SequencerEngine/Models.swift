@@ -913,6 +913,27 @@ public enum MIDIEvent: Sendable, Equatable, Codable {
         }
     }
 
+    func withTick(_ tick: Int) -> MIDIEvent {
+        switch self {
+        case let .noteOn(channel, note, velocity, _):
+            return .noteOn(channel: channel, note: note, velocity: velocity, tick: max(0, tick))
+        case let .noteOff(channel, note, velocity, _):
+            return .noteOff(channel: channel, note: note, velocity: velocity, tick: max(0, tick))
+        case let .programChange(channel, program, _):
+            return .programChange(channel: channel, program: program, tick: max(0, tick))
+        case let .pitchBend(channel, value, _):
+            return .pitchBend(channel: channel, value: value, tick: max(0, tick))
+        case let .channelPressure(channel, pressure, _):
+            return .channelPressure(channel: channel, pressure: pressure, tick: max(0, tick))
+        case let .polyPressure(channel, note, pressure, _):
+            return .polyPressure(channel: channel, note: note, pressure: pressure, tick: max(0, tick))
+        case let .controlChange(channel, controller, value, _):
+            return .controlChange(channel: channel, controller: controller, value: value, tick: max(0, tick))
+        case let .sysEx(data, _):
+            return .sysEx(data: data, tick: max(0, tick))
+        }
+    }
+
     private static func clampNote(_ note: UInt8, offset: Int) -> UInt8 {
         let shifted = Int(note) + offset
         return UInt8(min(127, max(0, shifted)))

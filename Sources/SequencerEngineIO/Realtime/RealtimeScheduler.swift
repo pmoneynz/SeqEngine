@@ -175,24 +175,32 @@ public final class RealtimeScheduler: @unchecked Sendable {
         timing.samples += 1
         timing.totalDrift += Double(drift)
         timing.maxDrift = max(timing.maxDrift, drift)
+        let cycleStartNanoseconds = now >= elapsed ? now - elapsed : 0
+        let nanosecondsPerTick = 1_000_000_000.0 / ticksPerSecond
 
         engine.advanceTransport(
             by: wholeTicks,
             sequenceIndex: configuration.sequenceIndex
         ) { event in
+            let eventOffsetNanoseconds = UInt64(
+                max(
+                    0,
+                    (Double(event.windowOffsetTicks) * nanosecondsPerTick).rounded()
+                )
+            )
             let packet = RealtimeScheduledPacket(
-                hostTimeNanoseconds: now &+ configuration.runnerIntervalNanoseconds,
+                hostTimeNanoseconds: cycleStartNanoseconds &+ eventOffsetNanoseconds,
                 event: event.event,
                 sequenceIndex: event.sequenceIndex,
                 trackIndex: event.trackIndex,
                 eventIndex: event.eventIndex
             )
-            let accepted = outputQueue.enqueue(packet)
+            let accepted = self.outputQueue.enqueue(packet)
             if accepted {
-                scheduledPacketsCount &+= 1
-                packetSink?.consume(packet)
+                self.scheduledPacketsCount &+= 1
+                self.packetSink?.consume(packet)
             } else {
-                outputOverflowCount &+= 1
+                self.outputOverflowCount &+= 1
             }
         }
     }

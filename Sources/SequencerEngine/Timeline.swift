@@ -1,16 +1,24 @@
 import Foundation
 
+public enum TimelineError: Error, Sendable, Equatable {
+    case invalidBeat
+    case invalidTick
+    case beatOutOfRange(maxBeat: Int, provided: Int)
+    case tickOutOfRange(maxTickExclusive: Int, provided: Int)
+    case emptySegments
+}
+
 public struct TimeSignature: Sendable, Equatable {
     public var numerator: Int
     public var denominator: Int
 
     public init(numerator: Int = 4, denominator: Int = 4) {
-        precondition(numerator > 0, "Time signature numerator must be > 0.")
-        precondition(denominator > 0, "Time signature denominator must be > 0.")
-        precondition((denominator & (denominator - 1)) == 0, "Time signature denominator must be a power of two.")
+        self.numerator = max(1, numerator)
+        self.denominator = Self.isPowerOfTwo(denominator) ? denominator : 4
+    }
 
-        self.numerator = numerator
-        self.denominator = denominator
+    private static func isPowerOfTwo(_ value: Int) -> Bool {
+        value > 0 && (value & (value - 1)) == 0
     }
 }
 
@@ -19,8 +27,7 @@ public struct TimeSignatureChange: Sendable, Equatable {
     public var signature: TimeSignature
 
     public init(bar: Int, signature: TimeSignature) {
-        precondition(bar > 0, "Time signature change bar must be >= 1.")
-        self.bar = bar
+        self.bar = max(1, bar)
         self.signature = signature
     }
 }
@@ -31,12 +38,9 @@ public struct BarBeatTick: Sendable, Equatable {
     public var tick: Int
 
     public init(bar: Int, beat: Int, tick: Int) {
-        precondition(bar > 0, "Bar must be >= 1.")
-        precondition(beat > 0, "Beat must be >= 1.")
-        precondition(tick >= 0, "Tick must be >= 0.")
-        self.bar = bar
-        self.beat = beat
-        self.tick = tick
+        self.bar = max(1, bar)
+        self.beat = max(1, beat)
+        self.tick = max(0, tick)
     }
 }
 
@@ -45,8 +49,7 @@ public struct TimelineMapper: Sendable {
     public let changes: [TimeSignatureChange]
 
     public init(ppqn: Int = Sequence.defaultPPQN, changes: [TimeSignatureChange] = []) {
-        precondition(ppqn > 0, "PPQN must be > 0.")
-        self.ppqn = ppqn
+        self.ppqn = max(1, ppqn)
         self.changes = Self.normalize(changes: changes)
     }
 
@@ -59,8 +62,25 @@ public struct TimelineMapper: Sendable {
     }
 
     public func toTick(_ position: BarBeatTick) -> Int {
+        guard let tick = try? toTickValidated(position) else {
+            return 0
+        }
+        return tick
+    }
+
+    public func toTickValidated(_ position: BarBeatTick) throws -> Int {
+        guard position.beat > 0 else {
+            throw TimelineError.invalidBeat
+        }
+        guard position.tick >= 0 else {
+            throw TimelineError.invalidTick
+        }
+
         var totalTicks = 0
         let segments = makeSegments()
+        guard segments.isEmpty == false else {
+            throw TimelineError.emptySegments
+        }
 
         for (index, segment) in segments.enumerated() {
             let nextBar = index + 1 < segments.count ? segments[index + 1].startBar : nil
@@ -70,9 +90,19 @@ public struct TimelineMapper: Sendable {
                 continue
             }
 
-            precondition(position.beat <= segment.signature.numerator, "Beat out of range for current bar signature.")
+            guard position.beat <= segment.signature.numerator else {
+                throw TimelineError.beatOutOfRange(
+                    maxBeat: segment.signature.numerator,
+                    provided: position.beat
+                )
+            }
             let beatTicks = ticksPerBeat(for: segment.signature)
-            precondition(position.tick < beatTicks, "Tick out of range for beat resolution.")
+            guard position.tick < beatTicks else {
+                throw TimelineError.tickOutOfRange(
+                    maxTickExclusive: beatTicks,
+                    provided: position.tick
+                )
+            }
 
             totalTicks += (position.bar - segment.startBar) * ticksPerBar(for: segment.signature)
             totalTicks += (position.beat - 1) * beatTicks
@@ -80,14 +110,25 @@ public struct TimelineMapper: Sendable {
             return totalTicks
         }
 
-        fatalError("Unreachable timeline conversion state.")
+        throw TimelineError.emptySegments
     }
 
     public func toBarBeatTick(tick absoluteTick: Int) -> BarBeatTick {
-        precondition(absoluteTick >= 0, "Absolute tick must be >= 0.")
+        guard let position = try? toBarBeatTickValidated(tick: absoluteTick) else {
+            return BarBeatTick(bar: 1, beat: 1, tick: 0)
+        }
+        return position
+    }
 
+    public func toBarBeatTickValidated(tick absoluteTick: Int) throws -> BarBeatTick {
+        guard absoluteTick >= 0 else {
+            throw TimelineError.invalidTick
+        }
         var remaining = absoluteTick
         let segments = makeSegments()
+        guard segments.isEmpty == false else {
+            throw TimelineError.emptySegments
+        }
 
         for (index, segment) in segments.enumerated() {
             let barTicks = ticksPerBar(for: segment.signature)
@@ -114,7 +155,7 @@ public struct TimelineMapper: Sendable {
             )
         }
 
-        fatalError("Unreachable timeline conversion state.")
+        throw TimelineError.emptySegments
     }
 
     private func makeSegments() -> [(startBar: Int, signature: TimeSignature)] {
